@@ -7,6 +7,7 @@ import { byId, el, formatStat } from './dom';
 import { STAT_KEYS } from '../types';
 import { creationView } from './creation';
 import { attentionCount, dashboardView } from './dashboard';
+import { nationArticle } from './article';
 import { galaxyMapView } from './galaxyMap';
 import { logView } from './log';
 import { overviewView } from './overview';
@@ -33,7 +34,10 @@ export interface ViewState {
 }
 
 export interface GameHandlers extends PlannerHandlers {
-  onChangePrefix: (prefix: string) => void;  onSelectTab: (tab: Tab) => void;
+  onChangePrefix: (prefix: string) => void;
+  /** Claims an unclaimed star system on the map; `name` is for the log. */
+  onClaimSystem: (system: number, name: string) => void;
+  onSelectTab: (tab: Tab) => void;
 }
 
 export function renderCreation(content: GameContent, onCreate: (setup: NationSetup) => void): void {
@@ -52,14 +56,13 @@ export function renderGame(nation: Nation, content: GameContent, now: number, vi
   let body: HTMLElement;
   if (view.tab === 'overview') {
     body = el('div', 'overview-layout');
-    body.append(
-      overviewView(nation, content, handlers.onChangePrefix),
-      dashboardView(nation, content, now, () => handlers.onSelectTab('planner')),
-    );
+    const main = dashboardView(nation, content, now, () => handlers.onSelectTab('planner'));
+    main.append(nationArticle(nation, content));
+    body.append(overviewView(nation, content, handlers.onChangePrefix), main);
   } else if (view.tab === 'planner') {
     body = plannerView(nation, content, now, view.outcome, handlers);
   } else if (view.tab === 'map') {
-    body = galaxyMapView(nation);
+    body = galaxyMapView(nation, handlers.onClaimSystem);
   } else {
     body = logView(nation.log, now);
   }

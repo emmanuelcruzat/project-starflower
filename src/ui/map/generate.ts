@@ -8,7 +8,14 @@ import type { Nation } from '../../types';
 export const MAP_WIDTH = 2400;
 export const MAP_HEIGHT = 1500;
 const MARGIN = 40;
-const STAR_COUNT = 420;
+/** At most this many systems; the sector's ragged outline usually fits a few less. */
+const STAR_COUNT = 380;
+/**
+ * The sector's outline: a ragged oval, `base` of the way to the map's edges
+ * on average, its edge wobbling by up to `wobble` in a few broad waves.
+ * Inside, a few `voids` (thinly starred patches) break up the spread.
+ */
+const SHAPE = { base: 0.82, wobble: 0.16, waves: [2, 3, 5], voids: { count: 3, radius: { min: 110, max: 210 } } };
 /** Systems closer than this look cramped and their labels collide. */
 const MIN_STAR_DISTANCE = 56;
 /** Extra lanes (beyond the ones that keep the map connected) are only this long, so routes stay local. */
@@ -24,7 +31,7 @@ const MAX_CONSTELLATION_EXITS = 3;
 const MAX_EXTRA_GATEWAY = 160;
 
 const PLAYER_SYSTEMS = 12;
-/** Stand-in neighbours so borders have something to meet. Varkesh appears in incidents.json. */
+/** Stand-in neighbors so borders have something to meet. Varkesh appears in incidents.json. */
 const NEIGHBOUR_NAMES = ['Varkesh Hegemony', 'Ostrel Compact', 'Tamsin Free Worlds', 'Halcyne Directorate', 'Orun Ascendancy', 'Ysolde Concord'];
 const NEIGHBOUR_SYSTEMS = { min: 10, max: 22 };
 
@@ -52,7 +59,7 @@ export interface MapSector {
   name: string;
 }
 
-/** A small cluster of neighbouring systems. */
+/** A small cluster of neighboring systems. */
 export interface MapConstellation {
   /** A survey code, like "R6-KYM". */
   name: string;
@@ -84,7 +91,8 @@ export interface GalaxyMap {
 export function generateMap(nation: Nation): GalaxyMap {
   // Seeding with the nation's id draws the same map on every visit.
   const random = seededRandom(nation.id);
-  const systems = placeSystems(random);
+  const shape = sectorShape(nation.id);
+  const systems = placeSystems(random, shape);
   // Like the other extras below, star types use their own stream so they
   // don't move any systems.
   const starRandom = seededRandom(`${nation.id}/stars`);
@@ -96,7 +104,7 @@ export function generateMap(nation: Nation): GalaxyMap {
   const home = Math.floor(random() * systems.length);
   const powers: MapPower[] = [
     // "Union of Kessra": the full title minus its "The", to sit alongside
-    // the neighbours' names on the map.
+    // the neighbors' names on the map.
     { name: `${nation.prefix} of ${nation.name}`, isPlayer: true },
     ...NEIGHBOUR_NAMES.map((name) => ({ name, isPlayer: false })),
   ];
@@ -104,6 +112,11 @@ export function generateMap(nation: Nation): GalaxyMap {
   const sector = { name: sectorName(random) };
   // Proper names use their own stream too, so naming doesn't move any stars.
   nameSettledSystems(systems, owners, seededRandom(`${nation.id}/names`));
+  // Systems the player has claimed join their territory. This comes after
+  // naming, so claiming one doesn't rename others.
+  for (const i of nation.claimedSystems ?? []) {
+    if (owners[i] === null) owners[i] = 0;
+  }
   return { systems, lanes, powers, owners, home, sector, constellations };
 }
 
@@ -114,11 +127,49 @@ export function generateMap(nation: Nation): GalaxyMap {
  * one. Simple, and it gives an even but natural-looking spread. Stops early
  * if the space fills up, so a too-large STAR_COUNT can't loop forever.
  */
-function placeSystems(random: Random): StarSystem[] {
+/**
+ * How far inside the sector a point is: below 1 is inside, above is out.
+ * The outline is an oval whose edge wobbles in a few broad waves, so no two
+ * sectors have the same shape; inside its voids the value is pushed up, so
+ * fewer stars land there. Drawn from its own stream, so it never moves
+ * anything else. The star map's dust follows it too.
+ */
+export function sectorShape(seed: string): (x: number, y: number) => number {
+  const random = seededRandom(`${seed}/shape`);
+  const waves = SHAPE.waves.map((k) => ({ k, phase: random() * Math.PI * 2, size: (0.5 + random() * 0.5) / k }));
+  const total = waves.reduce((sum, w) => sum + w.size, 0);
+  const cx = MAP_WIDTH / 2;
+  const cy = MAP_HEIGHT / 2;
+  const rx = cx - MARGIN;
+  const ry = cy - MARGIN;
+  const voids = Array.from({ length: SHAPE.voids.count }, () => ({
+    x: cx + (random() - 0.5) * rx * 1.2,
+    y: cy + (random() - 0.5) * ry * 1.2,
+    r: SHAPE.voids.radius.min + random() * (SHAPE.voids.radius.max - SHAPE.voids.radius.min),
+  }));
+  return (x, y) => {
+    const dx = (x - cx) / rx;
+    const dy = (y - cy) / ry;
+    const angle = Math.atan2(dy, dx);
+    // The edge's distance from the middle in this direction, never past the map's edge.
+    const edge = Math.min(1, SHAPE.base + (SHAPE.wobble / total) * waves.reduce((sum, w) => sum + w.size * Math.sin(w.k * angle + w.phase), 0));
+    let depth = Math.hypot(dx, dy) / edge;
+    // In a void, count the point as further out, most of all at its middle.
+    for (const v of voids) {
+      const near = 1 - Math.hypot(x - v.x, y - v.y) / v.r;
+      if (near > 0) depth += near * 1.2;
+    }
+    return depth;
+  };
+}
+
+function placeSystems(random: Random, shape: (x: number, y: number) => number): StarSystem[] {
   const systems: StarSystem[] = [];
   for (let attempt = 0; attempt < STAR_COUNT * 60 && systems.length < STAR_COUNT; attempt++) {
     const x = MARGIN + random() * (MAP_WIDTH - 2 * MARGIN);
     const y = MARGIN + random() * (MAP_HEIGHT - 2 * MARGIN);
+    // A ragged edge: near the outline, a star may or may not make it in.
+    if (shape(x, y) > 1 - 0.2 * random()) continue;
     if (systems.every((s) => distance(s, { x, y }) >= MIN_STAR_DISTANCE)) {
       // Constellations, and the names that come from them, are assigned once every system exists.
       // Stars get their spectral class from a stream of their own, in generateMap.
@@ -132,7 +183,7 @@ function placeSystems(random: Random): StarSystem[] {
 
 /** Constellations hold about this many systems each. */
 const CONSTELLATION_SIZE = 7;
-/** No constellation has fewer systems than this; smaller groups are merged into a neighbour. */
+/** No constellation has fewer systems than this; smaller groups are merged into a neighbor. */
 const MIN_CONSTELLATION_SIZE = 4;
 const CODE_CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 /** Lengths either side of the dash in a code like "M-OEE8" or "J5A-IX", as in EVE Online's null-sec. */
@@ -147,15 +198,15 @@ function constellationCode(random: Random): string {
 }
 
 /**
- * Splits the systems into small clusters of neighbours. A few systems spread
- * out across the map are picked as centres (each as far as possible from the
- * ones before), and every system joins its nearest centre, so each
+ * Splits the systems into small clusters of neighbors. A few systems spread
+ * out across the map are picked as centers (each as far as possible from the
+ * ones before), and every system joins its nearest center, so each
  * constellation is a compact patch that doesn't overlap the next.
  */
 function groupConstellations(systems: StarSystem[], random: Random): MapConstellation[] {
   if (systems.length === 0) return [];
   const centres = [Math.floor(random() * systems.length)];
-  // Each system's distance to its nearest centre so far, updated as centres
+  // Each system's distance to its nearest center so far, updated as centers
   // are added, so picking the next one is a single pass.
   const gaps = systems.map((s) => distance(s, systems[centres[0]]));
   const count = Math.max(1, Math.round(systems.length / CONSTELLATION_SIZE));
@@ -239,20 +290,51 @@ export interface StarType {
   colour: string;
   /** Neutron stars and black holes get their own look (see style.css). */
   exotic?: 'neutron' | 'black-hole';
+  /** Surface temperature, for the right-click info. */
+  temperature: string;
+  /** A sentence or two for the right-click info. */
+  description: string;
 }
 
 /** The spectral classes O to M, hottest to coolest, then the stellar remnants. */
 export const STAR_TYPES: StarType[] = [
-  { name: 'Class O', short: 'O', weight: 2, radius: 5.5, colour: '#9db4ff' },
-  { name: 'Class B', short: 'B', weight: 5, radius: 5, colour: '#b3c6ff' },
-  { name: 'Class A', short: 'A', weight: 8, radius: 4.6, colour: '#dbe4ff' },
-  { name: 'Class F', short: 'F', weight: 12, radius: 4.3, colour: '#fbf8ff' },
-  { name: 'Class G', short: 'G', weight: 18, radius: 4, colour: '#fff1c4' },
-  { name: 'Class K', short: 'K', weight: 25, radius: 3.6, colour: '#ffcf8f' },
-  { name: 'Class M', short: 'M', weight: 30, radius: 3.2, colour: '#ff9b6b' },
+  {
+    name: 'Class O', short: 'O', weight: 2, radius: 5.5, colour: '#9db4ff', temperature: 'Over 30,000 K',
+    description: 'A blue giant: rare, blindingly bright and short-lived. Its radiation scours any world that strays close.',
+  },
+  {
+    name: 'Class B', short: 'B', weight: 5, radius: 5, colour: '#b3c6ff', temperature: '10,000–30,000 K',
+    description: 'A hot blue-white star, hundreds of times brighter than the Sun. It burns through its fuel in a few hundred million years.',
+  },
+  {
+    name: 'Class A', short: 'A', weight: 8, radius: 4.6, colour: '#dbe4ff', temperature: '7,500–10,000 K',
+    description: 'A bright white star, spinning fast. Its planets have to keep their distance to stay cool.',
+  },
+  {
+    name: 'Class F', short: 'F', weight: 12, radius: 4.3, colour: '#fbf8ff', temperature: '6,000–7,500 K',
+    description: 'A yellow-white star, a little hotter and brighter than the Sun, with a generous zone where water stays liquid.',
+  },
+  {
+    name: 'Class G', short: 'G', weight: 18, radius: 4, colour: '#fff1c4', temperature: '5,200–6,000 K',
+    description: 'A yellow dwarf like the Sun: steady, long-lived and kind to life.',
+  },
+  {
+    name: 'Class K', short: 'K', weight: 25, radius: 3.6, colour: '#ffcf8f', temperature: '3,700–5,200 K',
+    description: 'An orange dwarf, cooler and dimmer than the Sun, and stable for tens of billions of years.',
+  },
+  {
+    name: 'Class M', short: 'M', weight: 30, radius: 3.2, colour: '#ff9b6b', temperature: '2,400–3,700 K',
+    description: 'A red dwarf, the most common star in the galaxy. Dim and nearly ageless, but given to violent flares.',
+  },
   // A neutron star is tiny in reality; it's drawn at the smallest star size so it still beats any planet.
-  { name: 'Neutron star', short: 'NS', weight: 2, radius: 3.2, colour: '#eaf4ff', exotic: 'neutron' },
-  { name: 'Black hole', short: 'BH', weight: 1, radius: 4.2, colour: '#05060a', exotic: 'black-hole' },
+  {
+    name: 'Neutron star', short: 'NS', weight: 2, radius: 3.2, colour: '#eaf4ff', exotic: 'neutron', temperature: 'About 600,000 K',
+    description: 'The collapsed core of a dead giant: a city-sized ball of neutrons, spinning many times a second.',
+  },
+  {
+    name: 'Black hole', short: 'BH', weight: 1, radius: 4.2, colour: '#05060a', exotic: 'black-hole', temperature: 'None it gives off',
+    description: 'Collapsed so far that not even light escapes. Matter spiraling in glows white-hot in its accretion disc.',
+  },
 ];
 
 /** How many stars a system has, and how likely each is. Most are single. */
@@ -290,18 +372,47 @@ export interface PlanetType {
   ringed?: boolean;
   /** How many moons a planet of this type can have, both ends included. Big planets hold on to more. */
   moons: { min: number; max: number };
+  /** A sentence or two for the right-click info. */
+  description: string;
 }
 
 export const PLANET_TYPES: PlanetType[] = [
-  { name: 'Barren', weight: 25, radius: 2.4, colour: '#8a8178', moons: { min: 0, max: 1 } },
-  { name: 'Gas giant', weight: 18, radius: 4.8, colour: '#c99a5b', ringed: true, moons: { min: 1, max: 5 } },
-  { name: 'Ice', weight: 15, radius: 2.8, colour: '#bfe3f2', moons: { min: 0, max: 2 } },
-  { name: 'Desert', weight: 10, radius: 2.8, colour: '#d9b26a', moons: { min: 0, max: 2 } },
-  { name: 'Toxic', weight: 8, radius: 2.8, colour: '#9fbf4a', moons: { min: 0, max: 1 } },
-  { name: 'Volcanic', weight: 8, radius: 2.6, colour: '#d2603f', moons: { min: 0, max: 1 } },
-  { name: 'Ocean', weight: 6, radius: 3.2, colour: '#3f8fd2', moons: { min: 0, max: 2 } },
-  { name: 'Jungle', weight: 4, radius: 3.2, colour: '#3fa65f', moons: { min: 0, max: 2 } },
-  { name: 'Terran', weight: 4, radius: 3.2, colour: '#5fb3a1', moons: { min: 0, max: 2 } },
+  {
+    name: 'Barren', weight: 25, radius: 2.4, colour: '#8a8178', moons: { min: 0, max: 1 },
+    description: 'Airless rock, cratered and silent. Poor for living on, rich for mining.',
+  },
+  {
+    name: 'Gas giant', weight: 18, radius: 4.8, colour: '#c99a5b', ringed: true, moons: { min: 1, max: 5 },
+    description: 'A vast ball of hydrogen and helium with no surface to stand on. Its moons are often worth more than it is.',
+  },
+  {
+    name: 'Ice', weight: 15, radius: 2.8, colour: '#bfe3f2', moons: { min: 0, max: 2 },
+    description: 'Frozen through, under thin, bitter air. Water is everywhere, if you can melt it.',
+  },
+  {
+    name: 'Desert', weight: 10, radius: 2.8, colour: '#d9b26a', moons: { min: 0, max: 2 },
+    description: 'Dry and dusty, its water locked away underground or in the polar caps.',
+  },
+  {
+    name: 'Toxic', weight: 8, radius: 2.8, colour: '#9fbf4a', moons: { min: 0, max: 1 },
+    description: 'A thick, poisonous atmosphere traps the heat under crushing clouds.',
+  },
+  {
+    name: 'Volcanic', weight: 8, radius: 2.6, colour: '#d2603f', moons: { min: 0, max: 1 },
+    description: 'Young and restless, its surface remade again and again by lava and ash.',
+  },
+  {
+    name: 'Ocean', weight: 6, radius: 3.2, colour: '#3f8fd2', moons: { min: 0, max: 2 },
+    description: 'Water from pole to pole, with islands few and far between.',
+  },
+  {
+    name: 'Jungle', weight: 4, radius: 3.2, colour: '#3fa65f', moons: { min: 0, max: 2 },
+    description: 'Hot, wet and overgrown. Life thrives here, not all of it friendly.',
+  },
+  {
+    name: 'Terran', weight: 4, radius: 3.2, colour: '#5fb3a1', moons: { min: 0, max: 2 },
+    description: 'Temperate, with breathable air and open water: as close to a second home as it gets.',
+  },
 ];
 const PLANETS_PER_SYSTEM = { min: 1, max: 6 };
 
@@ -393,7 +504,7 @@ function nameSettledSystems(systems: StarSystem[], owners: (number | null)[], ra
 
 const SECTOR_SYLLABLES = ['syn', 'ue', 'fe', 'eol', 'prou', 'pru', 'euq', 'hyp', 'io', 'bla', 'eo', 'dri', 'aae', 'phr', 'oea', 'col', 'gru', 'thu', 'oob', 'ae', 'wre', 'gie', 'scaa', 'ploi', 'mynoa', 'kyl', 'ix'];
 
-/** One or two capitalised words like "Synuefe" or "Eol Prou". */
+/** One or two capitalized words like "Synuefe" or "Eol Prou". */
 export function sectorName(random: Random): string {
   const word = () => {
     const syllables = 1 + Math.floor(random() * 2);
@@ -410,7 +521,7 @@ export function sectorName(random: Random): string {
  * lanes joining all its systems) plus a few extra short lanes for alternate
  * routes. Every constellation is therefore connected by its own lanes.
  *
- * Between constellations, "gateway" lanes: for each pair of neighbouring
+ * Between constellations, "gateway" lanes: for each pair of neighboring
  * constellations, the lane between their two closest systems. The shortest
  * of these that keep the whole map connected go in first, then a few more,
  * each constellation taking at most MAX_CONSTELLATION_EXITS.
@@ -507,7 +618,7 @@ function addGateways(
           if (!best || length < best.length) best = { lane: [i, j], length };
         }
       }
-      // Pairs further apart than this are never neighbours worth linking.
+      // Pairs further apart than this are never neighbors worth linking.
       if (best && best.length < MAX_EXTRA_GATEWAY * 2) candidates.push({ a, b, ...best });
     }
   }
@@ -569,7 +680,7 @@ function assignTerritory(systems: StarSystem[], lanes: Lane[], home: number, pow
   const owners: (number | null)[] = systems.map(() => null);
   const neighbours = systems.map((_, i) => lanes.flatMap(([a, b]) => (a === i ? [b] : b === i ? [a] : [])));
 
-  // Capitals: the player's home, then each neighbour as far as possible from
+  // Capitals: the player's home, then each neighbor as far as possible from
   // every capital so far, so powers start spread out.
   const capitals = [home];
   while (capitals.length < powerCount) {
@@ -620,3 +731,36 @@ function assignTerritory(systems: StarSystem[], lanes: Lane[], home: number, pow
   }
   return owners;
 }
+
+// --- Naming bodies ---
+
+/** Planets are numbered outwards from their star, astronomer-style: I, II, III... */
+export function roman(n: number): string {
+  return ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'][n - 1] ?? String(n);
+}
+
+/** Stars in a system are lettered, the primary being A. */
+export function starLetter(k: number): string {
+  return String.fromCharCode(65 + k);
+}
+
+/**
+ * Each planet's name. Planets around the whole system are numbered outwards
+ * after it ("Kessra II"); in a wide system, each star's planets are numbered
+ * after that star ("Kessra B II").
+ */
+export function planetNames(system: StarSystem, planets: Planet[]): string[] {
+  const counts = new Map<number | null, number>();
+  return planets.map((planet) => {
+    const n = (counts.get(planet.host) ?? 0) + 1;
+    counts.set(planet.host, n);
+    return planet.host === null ? `${system.name} ${roman(n)}` : `${system.name} ${starLetter(planet.host)} ${roman(n)}`;
+  });
+}
+
+/** "Class G", or for several stars "Binary · G + M". */
+export function describeStars(stars: StarType[]): string {
+  if (stars.length === 1) return stars[0].name;
+  return `${MULTIPLICITY_NAMES[stars.length - 1]} · ${stars.map((s) => s.short).join(' + ')}`;
+}
+

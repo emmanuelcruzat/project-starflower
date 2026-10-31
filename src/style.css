@@ -1,4 +1,4 @@
-/* Colours and fonts are defined once here, so retheming means editing this block only. */
+/* Colors and fonts are defined once here, so retheming means editing this block only. */
 :root {
   --bg: #06080d;
   --panel: #0d121b;
@@ -729,6 +729,11 @@ body.map-mode .tabs {
   cursor: grabbing;
 }
 
+/* Turning the map with a right-drag (MapControls.listenForSpins). */
+.starmap.spinning {
+  cursor: grabbing;
+}
+
 .starmap .dust circle {
   fill: #9fb3cf;
   pointer-events: none;
@@ -835,7 +840,7 @@ body.map-mode .tabs {
   }
 }
 
-/* Nation colours. power-0 is always the player, in the game's amber. */
+/* Nation colors. power-0 is always the player, in the game's amber. */
 .power-0 {
   --power: var(--accent);
 }
@@ -880,7 +885,7 @@ body.map-mode .tabs {
 
 /* --- Constellations, and focusing one --- */
 
-/* A constellation's name, centred among its stars. Kept faint so it sits in
+/* A constellation's name, centered among its stars. Kept faint so it sits in
    the background; clicking it focuses the constellation. bounding-box makes
    the whole box around the name clickable, not just the thin letters. */
 .starmap .constellation-name {
@@ -902,14 +907,14 @@ body.map-mode .tabs {
   fill-opacity: 0.9;
 }
 
-/* The focused constellation's name, shown above the grey-out. */
+/* The focused constellation's name, shown above the gray-out. */
 .starmap .constellation-name.selected {
   font-size: 12px;
   fill-opacity: 1;
   pointer-events: none;
 }
 
-/* Greys out the whole map; what's in focus is drawn above it (the lit layer
+/* Grays out the whole map; what's in focus is drawn above it (the lit layer
    in galaxyMap.ts). Clicks pass through, so something else can still be
    picked. */
 .starmap .focus-shade {
@@ -924,7 +929,7 @@ body.map-mode .tabs {
 }
 
 /* The focused system's miniature (systemPreview in galaxyMap.ts): its star
-   drawn 2x (PREVIEW.starScale) with a soft glow in its own colour, and its
+   drawn 2x (PREVIEW.starScale) with a soft glow in its own color, and its
    companions drawn by the miniature instead, in their own places. */
 .starmap .system.previewed .star,
 .starmap .system.previewed:hover .star {
@@ -951,7 +956,8 @@ body.map-mode .tabs {
   transition: opacity 0.15s, transform 0.2s;
 }
 
-/* No frame: a soft dark blur behind the rings keeps them readable over lanes. */
+/* No frame: a soft dark blur behind a system's rings (or a constellation's
+   stars) keeps them readable over lanes. */
 .starmap .preview-shadow {
   fill: #04060a;
   fill-opacity: 0.8;
@@ -1182,7 +1188,7 @@ button.link-button.map-system-link:hover {
   stroke-width: 1.2;
 }
 
-/* A focused system's lanes, drawn above the grey-out so its connections stand out. */
+/* A focused system's lanes, drawn above the gray-out so its connections stand out. */
 .starmap .lit-lane {
   stroke: #5a7396;
   pointer-events: none;
@@ -1219,9 +1225,9 @@ button.link-button.map-system-link:hover {
   fill: transparent;
 }
 
-/* Each star's colour comes from its spectral class (--star, set in
-   galaxyMap.ts). Scaling from the star's own centre makes it "swell" in
-   place on hover; the glow keeps its colour. */
+/* Each star's color comes from its spectral class (--star, set in
+   galaxyMap.ts). Scaling from the star's own center makes it "swell" in
+   place on hover; the glow keeps its color. */
 .starmap .star {
   fill: var(--star, #cfdcee);
   transform-box: fill-box;
@@ -1237,7 +1243,7 @@ button.link-button.map-system-link:hover {
 
 /* Stellar remnants. These come after the hover and rack rules on purpose,
    so their glows win at the same specificity. A black hole is a dark disc
-   ringed by its accretion disc (keep the colour in step with
+   ringed by its accretion disc (keep the color in step with
    ACCRETION_COLOUR in galaxyMap.ts); a neutron star is a tiny, fierce
    blue-white point with a wide halo. */
 .starmap .system .star.black-hole,
@@ -1270,8 +1276,44 @@ button.link-button.map-system-link:hover {
   opacity: 1;
 }
 
-/* The player's home system is always labelled. Its star keeps its own
-   colour; the dashed ring marks it as home. */
+/* Neighbors of the focus keep their names showing, but quieter: smaller
+   and dimmer, until hovered. The home system keeps its amber. */
+.starmap .system.lit.neighbour .system-label {
+  font-size: 8px;
+  fill: var(--muted);
+  opacity: 0.8;
+}
+
+.starmap .system.lit.neighbour:hover .system-label,
+.starmap .system.lit.neighbour:focus-visible .system-label {
+  fill: var(--text);
+  opacity: 1;
+}
+
+.starmap .system.home.lit.neighbour .system-label {
+  fill: var(--accent);
+}
+
+/* Zoomed far in, every system's name fades in, in the same quiet style as
+   a focus's neighbors: from --names-start to --names-end (--zoom is set by
+   MapControls in galaxyMap.ts). Hovering still shows it in full. */
+.starmap .system:not(.lit):not(.home) .system-label {
+  --names-start: 2;
+  --names-end: 2.5;
+  font-size: 8px;
+  fill: var(--muted);
+  opacity: calc(0.8 * clamp(0, (var(--zoom, 1) - var(--names-start)) / (var(--names-end) - var(--names-start)), 1));
+}
+
+.starmap .system:not(.lit):not(.home):hover .system-label,
+.starmap .system:not(.lit):not(.home):focus-visible .system-label {
+  font-size: 12px;
+  fill: var(--text);
+  opacity: 1;
+}
+
+/* The player's home system is always labeled. Its star keeps its own
+   color; the dashed ring marks it as home. */
 .starmap .home .system-label {
   opacity: 1;
   fill: var(--accent);
@@ -1664,7 +1706,7 @@ button.link-button.map-system-link:hover {
   fill: var(--muted);
 }
 
-/* The coloured dot beside each body in the panel's list. */
+/* The colored dot beside each body in the panel's list. */
 .body-swatch {
   flex: none;
   width: 10px;
@@ -1708,4 +1750,251 @@ button.link-button.map-system-link:hover {
 .system-map .diagram-lane:hover .lit-lane,
 .system-map .diagram-lane:focus-visible .lit-lane {
   stroke: #8aa3c4;
+}
+
+/* --- Right-click menu (contextMenu.ts) --- */
+
+.context-menu {
+  position: fixed;
+  z-index: 20;
+  width: 280px;
+  max-width: calc(100vw - 16px);
+  padding: 12px 14px;
+  background: rgba(6, 8, 13, 0.95);
+  border: 1px solid var(--panel-edge);
+  border-top: 2px solid var(--accent-2);
+  border-radius: 3px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  font-size: 0.85rem;
+}
+
+.context-menu .eyebrow {
+  margin: 0;
+}
+
+.context-menu-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0;
+  font-size: 1.05rem;
+  color: var(--text);
+}
+
+.context-menu-head .muted {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.context-menu-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 12px;
+  margin: 10px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--panel-edge);
+}
+
+.context-menu-facts dt {
+  color: var(--muted);
+}
+
+.context-menu-facts dd {
+  margin: 0;
+  color: var(--text);
+}
+
+.context-menu-description {
+  margin: 10px 0 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.context-menu-actions {
+  display: flex;
+  flex-direction: column;
+  margin: 10px -14px -12px;
+  padding: 4px 0;
+  border-top: 1px solid var(--panel-edge);
+}
+
+button.context-menu-action {
+  margin: 0;
+  padding: 7px 14px;
+  text-align: left;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent-2);
+  background: none;
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+}
+
+button.context-menu-action:hover,
+button.context-menu-action:focus-visible {
+  color: var(--text);
+  background: rgba(78, 195, 216, 0.1);
+  outline: none;
+}
+
+/* Hyperlanes out of the sector, towards its neighbors (exitLayer in galaxyMap.ts). */
+.starmap .sector-exit-lane {
+  stroke: #5a7396;
+  stroke-width: 1.4;
+  stroke-dasharray: 6 4;
+  stroke-linecap: round;
+  /* Flowing outwards, like a focused system's lanes (lane-flow is defined with .exit-lane). */
+  animation: lane-flow 0.8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .starmap .sector-exit-lane {
+    animation: none;
+  }
+}
+
+/* In a diagram, an exit from the sector looks like its other lanes but leads nowhere yet. */
+.system-map .diagram-sector-exit .lit-lane {
+  stroke-width: 2;
+}
+
+.system-map .diagram-sector-exit .diagram-lane-name {
+  fill: #5a7396;
+}
+
+.starmap .sector-exit-name {
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  fill: #5a7396;
+  paint-order: stroke;
+  stroke: #04060a;
+  stroke-width: 3px;
+  stroke-opacity: 0.7;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* --- Nation article on the overview (article.ts) --- */
+
+.nation-article {
+  line-height: 1.6;
+}
+
+/* Clears the floated infobox, so the panel grows around it. */
+.nation-article::after {
+  content: '';
+  display: block;
+  clear: both;
+}
+
+.nation-article p {
+  margin: 0 0 10px;
+}
+
+.article-source {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.article-title {
+  margin: 0 0 12px;
+  padding-bottom: 6px;
+  font-size: 1.35rem;
+  color: var(--text);
+  border-bottom: 1px solid var(--panel-edge);
+}
+
+.article-heading {
+  clear: none;
+  margin: 18px 0 8px;
+  padding-bottom: 4px;
+  font-size: 1rem;
+  color: var(--accent-2);
+  border-bottom: 1px solid var(--panel-edge);
+}
+
+.article-infobox {
+  float: right;
+  width: 260px;
+  margin: 0 0 12px 16px;
+  padding: 10px 12px;
+  background: var(--panel-raised);
+  border: 1px solid var(--panel-edge);
+  border-top: 2px solid var(--accent);
+  border-radius: 3px;
+  font-size: 0.82rem;
+}
+
+.nation-article .infobox-title {
+  margin: 0 0 8px;
+  text-align: center;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.infobox-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  margin: 0;
+}
+
+.infobox-facts dt {
+  color: var(--muted);
+}
+
+.infobox-facts dd {
+  margin: 0;
+  color: var(--text);
+}
+
+.article-list {
+  margin: 0 0 10px;
+  padding-left: 18px;
+}
+
+.article-list li {
+  margin: 2px 0;
+}
+
+.article-list .body-swatch {
+  display: inline-block;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.article-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.article-table th,
+.article-table td {
+  padding: 5px 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--panel-edge);
+}
+
+.article-table th {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.article-capital {
+  color: var(--accent);
+}
+
+@media (max-width: 760px) {
+  .article-infobox {
+    float: none;
+    width: auto;
+    margin: 0 0 12px;
+  }
 }

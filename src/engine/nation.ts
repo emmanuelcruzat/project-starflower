@@ -45,6 +45,19 @@ export function createNation(setup: NationSetup, content: GameContent, now: numb
 }
 
 /** Prefixes depend on stats, so a nation can change its prefix as it changes. */
+/**
+ * Claims a star system for the nation. PLACEHOLDER: the map is generated in
+ * the UI, so the caller checks the system is unclaimed and passes its name
+ * for the log.
+ */
+export function claimSystem(previous: Nation, system: number, name: string, now: number): Nation {
+  if (previous.claimedSystems?.includes(system)) return previous;
+  const nation = structuredClone(previous);
+  nation.claimedSystems = [...(nation.claimedSystems ?? []), system];
+  addLog(nation, { at: now, kind: 'nation', title: `Claimed the ${name} system` });
+  return nation;
+}
+
 export function changePrefix(previous: Nation, content: GameContent, prefix: string, now: number): Nation {
   if (prefix === previous.prefix || !availablePrefixes(previous, content).some((p) => p.name === prefix)) return previous;
   const nation = structuredClone(previous);

@@ -9,7 +9,7 @@
     "dailyEffects": { "military": 2, "economy": -0.5 },
     "completionEffects": { "military": 6, "cohesion": 2 },
     "setFlags": ["grand_fleet"],
-    "completionText": "The new fleet passes in review over the capital: forty hulls, fresh from the yards. Neighbours who used to ignore your transmissions have started answering them promptly."
+    "completionText": "The new fleet passes in review over the capital: forty hulls, fresh from the yards. Neighbors who used to ignore your transmissions have started answering them promptly."
   },
   {
     "id": "universal_education",

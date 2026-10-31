@@ -55,7 +55,7 @@ function disc(center: Point, radius: number): Corner[] {
 /**
  * Cuts away the part of a cell that is closer to `other` than to `own`. The
  * cut runs along the line halfway between the two systems, and the new side
- * it creates is labelled with `otherIndex`, so we know later who is across it.
+ * it creates is labeled with `otherIndex`, so we know later who is across it.
  * (This is the Sutherland–Hodgman clipping algorithm, for a single line.)
  */
 function keepCloserTo(corners: Corner[], own: Point, other: Point, otherIndex: number, radius: number): Corner[] {
@@ -80,7 +80,7 @@ function keepCloserTo(corners: Corner[], own: Point, other: Point, otherIndex: n
       const t = side(current) / (side(current) - side(next));
       const point = { x: current.x + (next.x - current.x) * t, y: current.y + (next.y - current.y) * t };
       // Each disc is a polygon, not a true circle, so on a rim side the
-      // crossing would land slightly differently in each of two neighbouring
+      // crossing would land slightly differently in each of two neighboring
       // cells, leaving the outlines unable to join. Use the exact point
       // instead, which both cells agree on.
       if (current.side !== RIM) return point;
@@ -107,7 +107,7 @@ export function fillPath(cells: Cell[]): string {
 }
 
 /**
- * Ends of neighbouring sides closer than this count as the same corner. They
+ * Ends of neighboring sides closer than this count as the same corner. They
  * differ only by rounding (keepCloserTo makes rim crossings exact). Keeping
  * this tiny matters: a loose tolerance can merge separate corners in an order-
  * dependent way and leave the outline unable to close.
@@ -128,7 +128,7 @@ const MAX_GAP = 12;
  */
 export function territoryRings(cells: Cell[], systems: Point[], owners: (number | null)[], owner: number): Point[][] | null {
   // Merge corners that are really the same point into one numbered vertex,
-  // so sides from neighbouring cells join up exactly.
+  // so sides from neighboring cells join up exactly.
   const vertices = new Vertices();
 
   // The same sides borderPath draws: everything not shared with a cell of the

@@ -192,4 +192,10 @@ export interface Nation {
   completedAmbitions: string[];
   /** Newest first. */
   log: LogEntry[];
+  /**
+   * PLACEHOLDER. Star systems the player has claimed on the galactic map,
+   * as indexes into its generated systems (see ui/map/generate.ts). Optional
+   * so saves from before claiming still load.
+   */
+  claimedSystems?: number[];
 }

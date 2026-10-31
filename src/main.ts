@@ -3,7 +3,7 @@ import { createClock } from './clock';
 import { loadContent } from './content';
 import { abandonAmbition, startAmbition } from './engine/ambitions';
 import { resolveIncident } from './engine/incidents';
-import { changePrefix, createNation } from './engine/nation';
+import { changePrefix, claimSystem, createNation } from './engine/nation';
 import { abandonOperation, chooseStageOption, startOperation } from './engine/operations';
 import { advanceTo } from './engine/simulation';
 import { loadDevSettings, loadNation, saveDevSettings, saveNation } from './storage';
@@ -65,7 +65,9 @@ function start(content: GameContent): void {
       onAbandonAmbition: () => {
         if (confirm('Abandon this ambition? All progress will be lost.')) act((n, t) => abandonAmbition(n, content, t), false);
       },
-      onChangePrefix: (prefix) => act((n, t) => changePrefix(n, content, prefix, t), false),      onCloseOutcome: () => {
+      onChangePrefix: (prefix) => act((n, t) => changePrefix(n, content, prefix, t), false),
+      onClaimSystem: (system, name) => act((n, t) => claimSystem(n, system, name, t), false),
+      onCloseOutcome: () => {
         showOutcome = false;
         draw();
       },

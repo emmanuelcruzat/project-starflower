@@ -9,7 +9,7 @@
     },
     "choices": [
       {
-        "text": "Strip it to the frame. Reactor, weapons, armour plate, everything.",
+        "text": "Strip it to the frame. Reactor, weapons, armor plate, everything.",
         "effects": {
           "economy": 4,
           "technology": 3
@@ -17,7 +17,7 @@
         "setFlags": [
           "salvaged_warship"
         ],
-        "result": "Salvage crews work nine days straight. The engineers who catalogue the parts start asking for a lot more time and a lot more budget."
+        "result": "Salvage crews work nine days straight. The engineers who catalog the parts start asking for a lot more time and a lot more budget."
       },
       {
         "text": "Hail its owners and offer to return it.",
@@ -125,7 +125,7 @@
           "warship_resolved",
           "bribed_varkesh"
         ],
-        "result": "The commander pockets the fee and files a report about a reactor breach, no survivors, nothing recovered. He'll remember the favour. So will you."
+        "result": "The commander pockets the fee and files a report about a reactor breach, no survivors, nothing recovered. He'll remember the favor. So will you."
       },
       {
         "text": "Tell him finders keepers. This is our space.",
@@ -291,7 +291,7 @@
         "setFlags": [
           "strike_settled"
         ],
-        "result": "The drills spin up within the hour. The Union throws a party on the largest rig and, to everyone's surprise, invites your labour minister."
+        "result": "The drills spin up within the hour. The Union throws a party on the largest rig and, to everyone's surprise, invites your labor minister."
       },
       {
         "text": "Send security forces to escort replacement crews.",
@@ -708,7 +708,7 @@
       "effects": {
         "technology": -1
       },
-      "result": "Rusk takes his proposal to a neighbouring nation, which funds it the same week."
+      "result": "Rusk takes his proposal to a neighboring nation, which funds it the same week."
     }
   },
   {
@@ -923,7 +923,7 @@
   {
     "id": "trade_delegation",
     "title": "A Trade Delegation Arrives",
-    "description": "A delegation from a prosperous neighbouring nation has docked at the capital with an offer: lower tariffs on both sides, and open access to each other's markets. Your industrialists are split. Some see a fortune; others see foreign goods flooding the shops.",
+    "description": "A delegation from a prosperous neighboring nation has docked at the capital with an offer: lower tariffs on both sides, and open access to each other's markets. Your industrialists are split. Some see a fortune; others see foreign goods flooding the shops.",
     "weight": 2,
     "repeatable": true,
     "condition": {

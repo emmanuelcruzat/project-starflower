@@ -58,10 +58,10 @@
       {
         "id": "refit",
         "title": "Refit Priorities",
-        "description": "The refit is half done, and the budget will stretch to one major upgrade across the fleet: heavier armour to survive a stand-up fight, or advanced sensors to make sure you see the fight coming.",
+        "description": "The refit is half done, and the budget will stretch to one major upgrade across the fleet: heavier armor to survive a stand-up fight, or advanced sensors to make sure you see the fight coming.",
         "durationHours": 10,
         "choices": [
-          { "text": "Heavier armour.", "effects": { "military": 5 }, "result": "The refitted fleet is slower but nearly impossible to kill. Admirals approve." },
+          { "text": "Heavier armor.", "effects": { "military": 5 }, "result": "The refitted fleet is slower but nearly impossible to kill. Admirals approve." },
           { "text": "Advanced sensors.", "effects": { "military": 3, "technology": 2 }, "result": "Your ships now see three systems further than anyone else's. The research spin-offs are already finding civilian uses." }
         ]
       },
@@ -72,7 +72,7 @@
         "durationHours": 16,
         "choices": [
           { "text": "Commission the full order.", "effects": { "military": 10, "technology": 2 }, "setFlags": ["modern_fleet"], "result": "Twelve new warships enter service in a single ceremony. The fleet is the most advanced it has ever been." },
-          { "text": "Sell the old salvage to offset the cost.", "effects": { "military": 7, "economy": 3, "cohesion": -1 }, "setFlags": ["modern_fleet"], "result": "The new line launches on budget. Your old warships turn up a few months later, flying pirate colours." }
+          { "text": "Sell the old salvage to offset the cost.", "effects": { "military": 7, "economy": 3, "cohesion": -1 }, "setFlags": ["modern_fleet"], "result": "The new line launches on budget. Your old warships turn up a few months later, flying pirate colors." }
         ]
       }
     ]
@@ -125,7 +125,7 @@
       {
         "id": "teardown",
         "title": "Teardown",
-        "description": "The engineers have catalogued every component of the salvaged cruiser. Two systems stand out: a reactor more efficient than anything your nation can build, and a weapons suite your military would kill for. There's only time and money to study one properly.",
+        "description": "The engineers have cataloged every component of the salvaged cruiser. Two systems stand out: a reactor more efficient than anything your nation can build, and a weapons suite your military would kill for. There's only time and money to study one properly.",
         "durationHours": 6,
         "choices": [
           { "text": "Study the reactor.", "next": "reactor", "result": "The reactor is lifted out and moved to a hardened lab on a moon nobody visits." },
@@ -139,7 +139,7 @@
         "durationHours": 10,
         "choices": [
           { "text": "Adapt it for civilian power grids.", "effects": { "economy": 5, "technology": 3 }, "result": "Cheap power floods the grid. Factories expand, and the price of everything starts to fall." },
-          { "text": "Adapt it for warships.", "effects": { "military": 4, "technology": 3 }, "result": "Your warships can now cross the nation without refuelling. Naval planners rewrite every war plan." }
+          { "text": "Adapt it for warships.", "effects": { "military": 4, "technology": 3 }, "result": "Your warships can now cross the nation without refueling. Naval planners rewrite every war plan." }
         ]
       },
       {

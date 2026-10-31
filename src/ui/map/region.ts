@@ -7,7 +7,7 @@ import { sectorName } from './generate';
 // and never saved. Only the player's own sector has been charted; the rest
 // are names on a grid.
 
-/** Centre to corner of one sector's hexagon, in region units. */
+/** Center to corner of one sector's hexagon, in region units. */
 export const SECTOR_RADIUS = 110;
 const COLUMNS = 9;
 const ROWS = 7;
@@ -22,7 +22,7 @@ export const REGION_HEIGHT = 2 * MARGIN + 2 * SECTOR_RADIUS + 1.5 * SECTOR_RADIU
 
 export interface RegionSector {
   name: string;
-  /** Centre of its hexagon, in region units. */
+  /** Center of its hexagon, in region units. */
   x: number;
   y: number;
   /** How crowded with stars it looks, from 0 to 1. Decoration only. */

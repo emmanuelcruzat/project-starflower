@@ -75,7 +75,7 @@ export function signed(n: number): string {
   return rounded > 0 ? `+${rounded}` : rounded < 0 ? `−${-rounded}` : '±0';
 }
 
-/** Coloured chips like "Economy +4". `suffix` adds a unit, e.g. "/day". */
+/** Colored chips like "Economy +4". `suffix` adds a unit, e.g. "/day". */
 export function effectChips(effects: Effects, suffix = ''): HTMLElement {
   const chips = el('div', 'effects');
   for (const key of STAT_KEYS) {

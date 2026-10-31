@@ -1,4 +1,4 @@
-// Small sound effects, synthesised with the Web Audio API so the game needs
+// Small sound effects, synthesized with the Web Audio API so the game needs
 // no audio files. Browsers only allow sound after the player has clicked or
 // pressed a key on the page; before that, effects are silently skipped.
 

@@ -2,9 +2,10 @@ import { seededRandom } from '../engine/random';
 import type { Nation } from '../types';
 import { el } from './dom';
 import { playChirp, playWhoosh } from './sound';
+import { closeContextMenu, showContextMenu, type MenuContent } from './contextMenu';
 import { borderPath, fillPath, pointInRing, ringsPath, territoryCells, territoryRings, type Point } from './map/borders';
 import {
-  generateMap, MAP_HEIGHT, MAP_WIDTH, MULTIPLICITY_NAMES, systemPlanets, type GalaxyMap, type Lane, type Planet, type StarSystem, type StarType,
+  describeStars, generateMap, MAP_HEIGHT, MAP_WIDTH, planetNames, sectorShape, starLetter, systemPlanets, type GalaxyMap, type Lane, type Planet, type StarType,
 } from './map/generate';
 import { generateRegion, hexCorners, REGION_HEIGHT, REGION_WIDTH, SECTOR_RADIUS, type GalacticRegion } from './map/region';
 import {
@@ -53,12 +54,16 @@ const SYSTEM_SIZE = 1500;
 const SYSTEM_ZOOM = { max: 3 };
 /** How far one arrow-key press moves the map, in screen pixels. */
 const KEY_PAN = 80;
+/** How long the map takes to turn back upright after a right-drag, in milliseconds. */
+const SPIN_SETTLE_MS = 250;
 /** A press that moves less than this many pixels is a click, not the start of a drag. */
 const CLICK_SLOP = 4;
 /** Focusing zooms in at least this far: enough to tell stars apart, and for a system, to see its planets. */
 const FOCUS_ZOOM = { constellation: 1.2, system: 2.2 };
 /** The faded overlay reaches this far past the map, so panning never shows its edge. */
 const SHADE_MARGIN = 10_000;
+/** The dark aura behind each star of a focused constellation, in map units. */
+const CONSTELLATION_AURA = 16;
 /**
  * The miniature of a focused system drawn round its star, in map units.
  * Stars are drawn this many times their usual size (keep `starScale` in
@@ -77,7 +82,7 @@ const NAME_SEARCH = { radius: 50, step: 10, pull: 0.25 };
 const ACCRETION_COLOUR = '#ffb36b';
 
 /**
- * Where the map is looking: the map point at the centre of the viewport, and
+ * Where the map is looking: the map point at the center of the viewport, and
  * how many screen pixels one map unit takes up.
  */
 interface Camera {
@@ -110,7 +115,8 @@ const galaxyPicks = new Map<string, number | null>();
 const openSystems = new Map<string, number>();
 const systemCameras = new Map<string, Camera>();
 
-export function galaxyMapView(nation: Nation): HTMLElement {
+/** `onClaim` claims an unclaimed system for the player; the screen is then rebuilt with it in their territory. */
+export function galaxyMapView(nation: Nation, onClaim: (system: number, name: string) => void): HTMLElement {
   const map = generateMap(nation);
   const region = generateRegion(nation, map.sector.name);
   const galaxy = generateGalaxy(nation, region.name);
@@ -139,7 +145,9 @@ export function galaxyMapView(nation: Nation): HTMLElement {
 
   const panel = el('section', 'panel map-panel');
   const viewport = el('div', 'map-viewport');
-  const starmap = drawMap(map, nation.id);
+  // Lanes out of the sector, towards its neighbors on the region map.
+  const exits = sectorExits(map, region);
+  const starmap = drawMap(map, nation.id, exits);
   const regionMap = drawRegion(region, map, nation.id);
   const galaxyMap = drawGalaxy(galaxy, region, nation.id);
   // One diagram, refilled with whichever system is opened.
@@ -180,24 +188,37 @@ export function galaxyMapView(nation: Nation): HTMLElement {
       else node.remove();
     }
     // Lanes inside a constellation are drawn solid. Lanes leading out (from
-    // a system to its neighbours, or a constellation's gateways to the next
+    // a system to its neighbors, or a constellation's gateways to the next
     // one) are dashed and flow outwards: each runs from the inside end to
     // the outside end, which sets the direction of the flow (style.css).
-    const members = next?.kind === 'constellation' ? lit : new Set<number>();
+    const members = new Set(next?.kind === 'constellation' ? map.constellations[next.index].systems : []);
     const insideLanes = map.lanes.filter(([a, b]) => members.has(a) && members.has(b));
     const exitLanes = next === null ? []
       : next.kind === 'system' ? nearby.map((n): Lane => [next.index, n])
         : map.lanes.flatMap(([a, b]): Lane[] => (members.has(a) === members.has(b) ? [] : members.has(a) ? [[a, b]] : [[b, a]]));
+    // Like a system's neighbors, the systems a constellation's gateways
+    // lead to are lit too, with their names showing.
+    for (const [, outside] of exitLanes) lit.add(outside);
     const drawLane = ([a, b]: Lane, kind: string) => {
       litLayer.append(svg('line', {
         x1: map.systems[a].x.toFixed(1), y1: map.systems[a].y.toFixed(1), x2: map.systems[b].x.toFixed(1), y2: map.systems[b].y.toFixed(1), class: `lane lit-lane ${kind}`,
       }));
     };
+    // A focused constellation's stars each get a small dark aura, like a
+    // focused system's miniature has, under its lanes, so they stand out
+    // from whatever lies behind.
+    for (const i of members) {
+      litLayer.append(svg('circle', { cx: map.systems[i].x.toFixed(1), cy: map.systems[i].y.toFixed(1), r: CONSTELLATION_AURA, class: 'preview-shadow' }));
+    }
     for (const lane of insideLanes) drawLane(lane, '');
     for (const lane of exitLanes) drawLane(lane, 'exit-lane');
     starmap.querySelectorAll('.system').forEach((node) => {
-      const isLit = lit.has(Number(node.getAttribute('data-system')));
+      const n = Number(node.getAttribute('data-system'));
+      const isLit = lit.has(n);
       node.classList.toggle('lit', isLit);
+      // Systems lit only for being next door (a system's neighbors, or where a
+      // constellation's gateways lead) get quieter names than the focus itself.
+      node.classList.toggle('neighbour', isLit && (next?.kind === 'system' ? n !== next.index : !members.has(n)));
       node.classList.remove('previewed');
       node.querySelector<SVGTextElement>('.system-label')?.style.removeProperty('transform');
       if (isLit) litLayer.append(node);
@@ -213,7 +234,7 @@ export function galaxyMapView(nation: Nation): HTMLElement {
     }
     const planets = next?.kind === 'system' ? systemPlanets(nation, next.index, map.systems[next.index].stars.length) : [];
     if (next?.kind === 'system') {
-      // The miniature goes over every other lit system (a neighbour can sit
+      // The miniature goes over every other lit system (a neighbor can sit
       // inside its rings, and its dark disc then hides it), with only the
       // focused star above it, so that can still be hovered. "previewed"
       // enlarges the star (style.css). The system's name moves down to
@@ -242,7 +263,7 @@ export function galaxyMapView(nation: Nation): HTMLElement {
       const x = points.reduce((sum, p) => sum + p.x, 0) / points.length;
       const y = points.reduce((sum, p) => sum + p.y, 0) / points.length;
       const zoom = Math.max(camera!.zoom, FOCUS_ZOOM[next.kind]);
-      // Centre it in the part of the map the panel doesn't cover.
+      // Center it in the part of the map the panel doesn't cover.
       controls.lookAt(x + info.offsetWidth / 2 / zoom, y, zoom);
     }
   };
@@ -252,18 +273,21 @@ export function galaxyMapView(nation: Nation): HTMLElement {
   // one level.
   const controls = new MapControls(viewport, starmap, camera, (target) => {
     // The miniature belongs to the focused system; clicking it keeps the focus.
-    if (target?.closest('.system-preview')) return;
     const star = target?.closest('.system');
     const name = target?.closest('.constellation-name');
     // Focusing a system moves the camera, so the second tap of a double
-    // click lands somewhere else. Any quick second tap counts.
+    // click lands somewhere else (often on the system's miniature). Any
+    // quick second tap counts. Opening a system shouldn't leave it selected
+    // for when you come back out, so the first tap's selection is undone.
     const now = performance.now();
     if (lastStarTap && now - lastStarTap.time < DOUBLE_TAP_MS) {
-      const index = lastStarTap.index;
+      const { index, before } = lastStarTap;
       lastStarTap = null;
+      focus(before, false);
       return openSystem(index);
     }
-    lastStarTap = star ? { index: Number(star.getAttribute('data-system')), time: now } : null;
+    if (target?.closest('.system-preview')) return;
+    lastStarTap = star ? { index: Number(star.getAttribute('data-system')), time: now, before: focused.get(nation.id) ?? null } : null;
     if (star) focus({ kind: 'system', index: Number(star.getAttribute('data-system')) }, true);
     else if (name) focus({ kind: 'constellation', index: Number(name.getAttribute('data-constellation')) }, true);
     else focus(null, false);
@@ -281,15 +305,15 @@ export function galaxyMapView(nation: Nation): HTMLElement {
     if (near !== null) openSystem(near);
     else if (current?.kind === 'system') openSystem(current.index);
   });
-  let lastStarTap: { index: number; time: number } | null = null;
+  /** The last tap on a star, for spotting double clicks, and what was selected before it. */
+  let lastStarTap: { index: number; time: number; before: Focus } | null = null;
 
   // The system diagram. Links in its panel and trail lead back out to the
   // sector, except links to other systems, which open their diagrams.
   const openSystem = (index: number) => {
     openSystems.set(nation.id, index);
-    // The sector keeps the system focused, for when you come back out.
-    if (views.get(nation.id) === 'sector') focus({ kind: 'system', index }, false);
-    else focused.set(nation.id, { kind: 'system', index });
+    // The star map's selection is left as it was: coming back out, it's
+    // just as you left it, with the camera centered where the system is.
     showView('system', 'zoom');
   };
   const fromSystem: FocusHandler = (next, moveCamera) => {
@@ -310,7 +334,7 @@ export function galaxyMapView(nation: Nation): HTMLElement {
   /** Draws the open system's diagram, and its trail and panel. `frame` fits the camera to its outermost orbit. */
   const showSystem = (index: number, frame: boolean) => {
     const planets = systemPlanets(nation, index, map.systems[index].stars.length);
-    const { parts, reach } = systemDiagram(map, index, planets, nation.id);
+    const { parts, reach } = systemDiagram(map, index, planets, nation.id, exits);
     systemContent.replaceChildren(...parts);
     // Most systems don't reach the edge of the diagram, so fit what's there,
     // with room for the hyperlanes and their names.
@@ -328,6 +352,7 @@ export function galaxyMapView(nation: Nation): HTMLElement {
   const pickSector = (index: number | null) => {
     regionPicks.set(nation.id, index);
     regionMap.querySelectorAll('.sector').forEach((node) => node.classList.toggle('selected', Number(node.getAttribute('data-sector')) === index));
+    spotlight(regionMap, index === null ? null : regionMap.querySelector(`.sector[data-sector="${index}"]`));
     info.hidden = index === null;
     if (index === null) return;
     info.replaceChildren(...sectorPanel(region, map, index, () => pickSector(null), () => showView('sector', 'zoom')));
@@ -364,6 +389,7 @@ export function galaxyMapView(nation: Nation): HTMLElement {
   const pickRegion = (index: number | null) => {
     galaxyPicks.set(nation.id, index);
     galaxyMap.querySelectorAll('.galaxy-region').forEach((node) => node.classList.toggle('selected', Number(node.getAttribute('data-region')) === index));
+    spotlight(galaxyMap, index === null ? null : galaxyMap.querySelector(`.galaxy-region[data-region="${index}"]`));
     info.hidden = index === null;
     if (index === null) return;
     info.replaceChildren(...regionPanel(galaxy, region, map, index, () => pickRegion(null), () => showView('region', 'zoom')));
@@ -415,7 +441,7 @@ export function galaxyMapView(nation: Nation): HTMLElement {
     const level = levels[next];
     const out = level.depth > levels[previous].depth;
 
-    // Pulling out of a level centres the one above on where you came from,
+    // Pulling out of a level centers the one above on where you came from,
     // still close in; going in shows the whole of the level below.
     const child = level.child?.();
     if (how === 'zoom' && out && child) level.controls.lookAt(child.x, child.y, Math.max(level.controls.fitZoom(), ARRIVE[next]));
@@ -445,6 +471,71 @@ export function galaxyMapView(nation: Nation): HTMLElement {
   for (const { node } of Object.values(levels)) node.addEventListener('animationend', () => node.classList.remove('arrive-out', 'arrive-in'));
   const current = () => views.get(nation.id) ?? 'sector';
 
+  // Right-clicking a star system (on the star map, or a hyperlane's end in
+  // a diagram) or any star or planet opens a menu with what's known about
+  // it, and what can be done with it. Moons are too small to bother with.
+  const systemActions = (index: number): MenuContent['actions'] => {
+    const actions: NonNullable<MenuContent['actions']> = [];
+    // PLACEHOLDER: any unclaimed system can be claimed, from anywhere.
+    if (map.owners[index] === null) {
+      actions.push({
+        label: 'Claim system',
+        run: () => {
+          playChirp('system');
+          onClaim(index, map.systems[index].name);
+        },
+      });
+    }
+    const inDiagram = current() === 'system';
+    if (!inDiagram || openSystems.get(nation.id) !== index) actions.push({ label: 'Open system view', run: () => openSystem(index) });
+    if (inDiagram) {
+      actions.push({ label: 'Show on star map', run: () => fromSystem({ kind: 'system', index }, true) });
+    } else {
+      const now = focused.get(nation.id);
+      if (now?.kind !== 'system' || now.index !== index) actions.push({ label: 'Select', run: () => focus({ kind: 'system', index }, true) });
+      actions.push({ label: `Show ${map.constellations[map.systems[index].constellation].name}`, run: () => focus({ kind: 'constellation', index: map.systems[index].constellation }, true) });
+    }
+    return actions;
+  };
+  const menuFor = (target: Element): MenuContent | null => {
+    // Which system the bodies under the pointer belong to: the open diagram's, or the focused one's miniature.
+    const now = focused.get(nation.id);
+    const owner = current() === 'system' ? openSystems.get(nation.id) ?? null : now?.kind === 'system' ? now.index : null;
+    const inPreview = current() === 'sector' && target.closest('.system-preview') !== null;
+    const extra = inPreview && owner !== null ? [{ label: 'Open system view', run: () => openSystem(owner) }] : [];
+
+    const planet = target.closest('[data-planet]');
+    if (planet && owner !== null) {
+      return { ...planetInfo(map, owner, systemPlanets(nation, owner, map.systems[owner].stars.length), Number(planet.getAttribute('data-planet'))), actions: extra };
+    }
+    const star = target.closest('[data-star]');
+    if (star && owner !== null) return { ...starInfo(map, owner, Number(star.getAttribute('data-star'))), actions: extra };
+    const system = target.closest('[data-system]');
+    if (system) {
+      const index = Number(system.getAttribute('data-system'));
+      // On the star map, a system's own star is its primary; the menu covers the whole system.
+      return { ...systemInfo(map, index, systemPlanets(nation, index, map.systems[index].stars.length)), actions: systemActions(index) };
+    }
+    return null;
+  };
+  for (const node of [starmap, systemMap]) {
+    node.addEventListener('contextmenu', (event) => {
+      event.preventDefault();
+      const target = event.target as Element;
+      const content = menuFor(target);
+      if (!content) return closeContextMenu();
+      // From the keyboard (the menu key, or Shift+F10) there's no pointer: open it by the thing itself.
+      let { clientX: x, clientY: y } = event;
+      if (x === 0 && y === 0) {
+        const box = target.getBoundingClientRect();
+        [x, y] = [box.right, box.top + box.height / 2];
+      }
+      // The same chirps as selecting: the brighter one for a whole system, the softer for a single body.
+      playChirp(content.eyebrow.startsWith('Star system') ? 'system' : 'constellation');
+      showContextMenu(x, y, content);
+    });
+  }
+
   /** The trail for the galaxy and region views: "Galaxy › Region", with the galaxy a link back out. */
   const outerCrumbs = (view: View): HTMLElement[] => {
     const galaxyLabel = `${galaxy.name} Galaxy`;
@@ -473,7 +564,7 @@ export function galaxyMapView(nation: Nation): HTMLElement {
   const goTo = (view: View) => showView(view, current() === view ? 'jump' : 'zoom');
   button('+', 'Zoom in', () => levels[current()].controls.zoomBy(1.4));
   button('−', 'Zoom out', () => levels[current()].controls.zoomBy(1 / 1.4));
-  button('Home', `Centre on ${home.name}`, () => {
+  button('Home', `Center on ${home.name}`, () => {
     if (current() !== 'sector') showView('sector', 'zoom');
     controls.lookAt(home.x, home.y, 1);
   });
@@ -484,7 +575,7 @@ export function galaxyMapView(nation: Nation): HTMLElement {
   const footer = el('div', 'map-hud map-footer');
   footer.append(
     legend(map),
-    el('p', 'map-note', 'Stellar cartography is still underway. These borders are a preview: territory, neighbouring nations and travel will come in a future version.'),
+    el('p', 'map-note', 'Stellar cartography is still underway. These borders are a preview: territory, neighboring nations and travel will come in a future version.'),
   );
 
   viewport.append(systemMap, starmap, regionMap, galaxyMap, header, buttons, info, footer);
@@ -541,14 +632,12 @@ function closeButton(focus: FocusHandler): HTMLElement {
   return close;
 }
 
-/** A system's name as a link that focuses it, with its owner's colour. */
+/** A system's name as a link that focuses it, with its owner's color. */
 function systemRow(map: GalaxyMap, i: number, focus: FocusHandler, note = ownerName(map, map.owners[i])): HTMLElement {
   const item = el('li');
   const owner = map.owners[i];
   const system = map.systems[i];
   const link = el('button', 'link-button map-system-link', system.name + (i === map.home ? ' (capital)' : ''));
-  // Named systems still have a designation; it shows on hover.
-  if (system.name !== system.designation) link.title = system.designation;
   link.addEventListener('click', () => focus({ kind: 'system', index: i }, true));
   item.append(el('span', `swatch ${owner === null ? 'unclaimed' : `power-${owner}`}`), link, el('span', 'muted', note));
   return item;
@@ -584,7 +673,7 @@ function constellationPanel(map: GalaxyMap, index: number, focus: FocusHandler):
   part.append(
     el('p', 'eyebrow', 'Constellation'),
     el('h3', 'map-info-title', constellation.name),
-    el('p', 'muted', `${constellation.systems.length} systems · lanes to ${neighbours.size} neighbouring constellation${neighbours.size === 1 ? '' : 's'}`),
+    el('p', 'muted', `${constellation.systems.length} systems · lanes to ${neighbours.size} neighboring constellation${neighbours.size === 1 ? '' : 's'}`),
     systems,
   );
   if (neighbours.size > 0) {
@@ -665,7 +754,7 @@ function systemPreview(map: GalaxyMap, index: number, planets: Planet[], seed: s
       const x = host.x + Math.cos(angle * Math.PI * 2) * orbit;
       const y = host.y + Math.sin(angle * Math.PI * 2) * orbit;
       const r = planet.type.radius * PREVIEW.planetScale;
-      const body = svg('g', { class: 'planet' });
+      const body = svg('g', { class: 'planet', 'data-planet': i });
       const title = svg('title', {});
       const moons = planet.moons.length;
       title.textContent = `${names[i]} · ${planet.type.name}${moons > 0 ? ` · ${moons} moon${moons === 1 ? '' : 's'}` : ''}`;
@@ -694,6 +783,7 @@ function systemPreview(map: GalaxyMap, index: number, planets: Planet[], seed: s
     if (k === 0) return;
     const at = hosts[k];
     const node = starCircle(star, at.x, at.y, radius(star), 'preview-star');
+    node.setAttribute('data-star', String(k));
     const title = svg('title', {});
     title.textContent = `${system.name} ${starLetter(k)} · ${star.name}`;
     node.append(title);
@@ -707,11 +797,6 @@ function systemPreview(map: GalaxyMap, index: number, planets: Planet[], seed: s
   return { node: group, below: reach };
 }
 
-/** Planets are numbered outwards from their star, astronomer-style: I, II, III... */
-function roman(n: number): string {
-  return ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'][n - 1] ?? String(n);
-}
-
 /** One system: what and whose it is, and every system a hyperlane leads to. */
 function systemPanel(map: GalaxyMap, index: number, nearby: number[], planets: Planet[], focus: FocusHandler): HTMLElement[] {
   const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
@@ -722,7 +807,6 @@ function systemPanel(map: GalaxyMap, index: number, nearby: number[], planets: P
     el('p', 'eyebrow', index === map.home ? 'System · your capital' : 'System'),
     el('h3', 'map-info-title', system.name),
   );
-  if (system.name !== system.designation) part.append(el('p', 'muted', `Designation ${system.designation}`));
   part.append(
     el('p', 'muted', describeStars(system.stars)),
     el('p', 'muted', `${plural(planets.length, 'planet')} · ${plural(moonCount, 'moon')} · ${plural(nearby.length, 'hyperlane')}`),
@@ -755,6 +839,8 @@ function ownerList(rows: { power: number | null; label: string; count: number }[
  * Pans and zooms the map by changing the SVG's viewBox, which keeps lines
  * and text crisp at any zoom. Drag (mouse or finger) to pan, scroll wheel to
  * zoom around the pointer, and arrow keys and +/- when the map has focus.
+ * Dragging with the right button turns the map for a look round; it turns
+ * back upright when let go.
  */
 class MapControls {
   /**
@@ -783,6 +869,7 @@ class MapControls {
     // the window, so redraw whenever its size changes.
     new ResizeObserver(() => this.apply()).observe(viewport);
     this.listenForDrags();
+    this.listenForSpins();
 
     svg.addEventListener('wheel', (event) => {
       event.preventDefault();
@@ -899,12 +986,18 @@ class MapControls {
     const { camera } = this;
     camera.zoom = this.clampZoom(camera.zoom);
     // Keep the view over the map. If the map is narrower than the view
-    // along an axis, centre it on that axis instead.
+    // along an axis, center it on that axis instead.
     const [, , width, height] = this.viewBox();
     const clamp = (value: number, half: number, size: number) => (half * 2 >= size ? size / 2 : Math.min(size - half, Math.max(half, value)));
     camera.x = clamp(camera.x, width / 2, this.world.width);
     camera.y = clamp(camera.y, height / 2, this.world.height);
-    this.svg.setAttribute('viewBox', this.viewBox().map((n) => n.toFixed(1)).join(' '));
+    // While spun, the map is drawn `scale` times bigger (see spinTo) and
+    // shows `scale` times more of itself, so things stay the same size on
+    // screen and the extra fills the corners the turn would leave empty.
+    const { scale } = this.spin;
+    const [left, top] = this.viewBox();
+    const view = [left - (width * (scale - 1)) / 2, top - (height * (scale - 1)) / 2, width * scale, height * scale];
+    this.svg.setAttribute('viewBox', view.map((n) => n.toFixed(1)).join(' '));
     // For styles that change with zoom, like nation names fading out up close (style.css).
     this.svg.style.setProperty('--zoom', camera.zoom.toFixed(3));
   }
@@ -915,6 +1008,85 @@ class MapControls {
    * pressed. (Pointer capture sends the later events to the map itself, so
    * the target has to be remembered from the press.)
    */
+  /** The map's current turn while dragging with the right button, and how much bigger it's drawn to cover the corners. */
+  private spin = { angle: 0, scale: 1 };
+  /** Set when a right-drag turned the map, so the right-click menu that follows the release doesn't open. */
+  private spunSinceRightPress = false;
+  private settle = 0;
+
+  /**
+   * Turns the map by `angle` radians around the middle of the screen. The
+   * map is drawn just big enough that, turned, it still covers the whole
+   * view, and shows correspondingly more of itself (see apply).
+   */
+  private spinTo(angle: number): void {
+    const width = this.viewport.clientWidth;
+    const height = this.viewport.clientHeight;
+    const cos = Math.abs(Math.cos(angle));
+    const sin = Math.abs(Math.sin(angle));
+    const scale = Math.max((width * cos + height * sin) / width, (width * sin + height * cos) / height);
+    this.spin = { angle, scale };
+    // Around the middle of the screen (a zoom between views may have left another origin).
+    this.svg.style.transformOrigin = '50% 50%';
+    this.svg.style.transform = angle === 0 ? '' : `rotate(${angle}rad) scale(${scale.toFixed(4)})`;
+    this.apply();
+  }
+
+  /**
+   * Dragging with the right button turns the map, following the pointer
+   * round the middle of the screen. Letting go eases it back. A drag that
+   * turned the map doesn't open the right-click menu afterwards.
+   */
+  private listenForSpins(): void {
+    const { svg } = this;
+    let spinning: { id: number; from: number; base: number; moved: number; x: number; y: number } | null = null;
+    const angleOf = (event: PointerEvent) => {
+      const rect = this.viewport.getBoundingClientRect();
+      return Math.atan2(event.clientY - (rect.top + rect.height / 2), event.clientX - (rect.left + rect.width / 2));
+    };
+
+    svg.addEventListener('pointerdown', (event) => {
+      if (event.button !== 2 || spinning) return;
+      cancelAnimationFrame(this.settle);
+      this.spunSinceRightPress = false;
+      spinning = { id: event.pointerId, from: angleOf(event), base: this.spin.angle, moved: 0, x: event.clientX, y: event.clientY };
+      svg.setPointerCapture(event.pointerId);
+    });
+    svg.addEventListener('pointermove', (event) => {
+      if (spinning?.id !== event.pointerId) return;
+      spinning.moved = Math.max(spinning.moved, Math.hypot(event.clientX - spinning.x, event.clientY - spinning.y));
+      if (spinning.moved < CLICK_SLOP) return;
+      this.spunSinceRightPress = true;
+      svg.classList.add('spinning');
+      this.spinTo(spinning.base + angleOf(event) - spinning.from);
+    });
+    const end = (event: PointerEvent) => {
+      if (spinning?.id !== event.pointerId) return;
+      spinning = null;
+      svg.classList.remove('spinning');
+      // Ease back to upright, the short way round.
+      const start = Math.atan2(Math.sin(this.spin.angle), Math.cos(this.spin.angle));
+      if (start === 0) return;
+      const began = performance.now();
+      const step = (now: number) => {
+        const t = Math.min(1, (now - began) / SPIN_SETTLE_MS);
+        const eased = 1 - (1 - t) ** 3;
+        this.spinTo(t === 1 ? 0 : start * (1 - eased));
+        if (t < 1) this.settle = requestAnimationFrame(step);
+      };
+      this.settle = requestAnimationFrame(step);
+    };
+    svg.addEventListener('pointerup', end);
+    svg.addEventListener('pointercancel', end);
+    // Registered before the map's own right-click menus, so this can stop them.
+    svg.addEventListener('contextmenu', (event) => {
+      if (!this.spunSinceRightPress) return;
+      this.spunSinceRightPress = false;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    });
+  }
+
   private listenForDrags(): void {
     const { svg, camera } = this;
     let drag: { id: number; x: number; y: number; moved: number; target: Element } | null = null;
@@ -952,13 +1124,14 @@ function svg<K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string,
   return node;
 }
 
-function drawMap(map: GalaxyMap, seed: string): SVGSVGElement {
+function drawMap(map: GalaxyMap, seed: string, exits: SectorExit[]): SVGSVGElement {
   const { systems, lanes, powers, owners, home } = map;
   const root = svg('svg', { viewBox: `0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`, role: 'img', class: 'starmap sector-map', tabindex: 0 });
   root.setAttribute('aria-label', `Star map with ${systems.length} systems. ${powers[0].name} is at ${systems[home].name}. Use the arrow keys to move and plus or minus to zoom.`);
 
   // Layers, back to front: dust, territories, lanes, stars.
-  root.append(dust(seed));
+  // The dust thins out past the sector's edge, so its shape shows.
+  root.append(dust(seed, MAP_WIDTH, MAP_HEIGHT, DUST_COUNT, sectorShape(seed)));
   const claimed = owners.flatMap((owner, i) => (owner === null ? [] : [i]));
   const cells = territoryCells(systems, claimed, TERRITORY_RADIUS);
   const defs = svg('defs', {});
@@ -1008,6 +1181,7 @@ function drawMap(map: GalaxyMap, seed: string): SVGSVGElement {
       class: 'lane',
     }));
   }
+  root.append(exitLayer(map, exits));
   // Above the lanes so they don't cross out the letters, below the stars so
   // hovering still works.
   root.append(constellationLayer(map), names);
@@ -1024,8 +1198,8 @@ function drawMap(map: GalaxyMap, seed: string): SVGSVGElement {
     const y = system.y.toFixed(1);
 
     const title = svg('title', {});
-    const designation = system.name === system.designation ? '' : ` (${system.designation})`;
-    title.textContent = `${system.name}${designation} · ${describeStars(system.stars)} · ${ownerName}`;
+    // A named system shows only its name; its survey designation stays internal.
+    title.textContent = `${system.name} · ${describeStars(system.stars)} · ${ownerName}`;
     // An invisible, larger circle makes small stars easy to hover.
     group.append(title, svg('circle', { cx: x, cy: y, r: 12, class: 'hit' }));
     if (isHome) group.append(svg('circle', { cx: x, cy: y, r: 11, class: 'home-ring' }));
@@ -1040,7 +1214,7 @@ function drawMap(map: GalaxyMap, seed: string): SVGSVGElement {
     });
     group.append(starCircle(primary, system.x, system.y, primary.radius));
 
-    // The name sits centred under the stars.
+    // The name sits centered under the stars.
     const label = svg('text', {
       x: x,
       y: (system.y + Math.max(...bottoms) + 12).toFixed(1),
@@ -1065,7 +1239,7 @@ function clearSpot(map: GalaxyMap, members: number[]): Point {
     x: members.reduce((sum, i) => sum + map.systems[i].x, 0) / members.length,
     y: members.reduce((sum, i) => sum + map.systems[i].y, 0) / members.length,
   };
-  // Every nearby star, and where its name sits (centred about 16 units below it).
+  // Every nearby star, and where its name sits (centered about 16 units below it).
   const obstacles = map.systems
     .filter((s) => Math.hypot(s.x - middle.x, s.y - middle.y) < NAME_SEARCH.radius + 80)
     .flatMap((s) => [{ x: s.x, y: s.y }, { x: s.x - 18, y: s.y + 16 }, { x: s.x + 18, y: s.y + 16 }]);
@@ -1086,7 +1260,7 @@ function clearSpot(map: GalaxyMap, members: number[]): Point {
 }
 
 /**
- * One star. The colour goes in a CSS variable rather than a fill attribute,
+ * One star. The color goes in a CSS variable rather than a fill attribute,
  * because CSS rules (like hover) would otherwise override it. Neutron stars
  * and black holes get an extra class for their own look.
  */
@@ -1101,12 +1275,6 @@ function companionOffset(primary: StarType, companion: StarType, k: number): { d
   const angle = ([-35, 145, 50][k] * Math.PI) / 180;
   const distance = primary.radius + r + 1;
   return { dx: Math.cos(angle) * distance, dy: Math.sin(angle) * distance, r };
-}
-
-/** "Class G", or for several stars "Binary · G + M". */
-function describeStars(stars: StarType[]): string {
-  if (stars.length === 1) return stars[0].name;
-  return `${MULTIPLICITY_NAMES[stars.length - 1]} · ${stars.map((s) => s.short).join(' + ')}`;
 }
 
 /**
@@ -1128,7 +1296,7 @@ function territoryName(name: string, power: number, points: Point[], rings: Poin
   const limit = Math.PI / 6;
   const angle = n < 3 ? 0 : Math.max(-limit, Math.min(limit, Math.atan2(2 * xy, xx - yy) / 2));
 
-  // A C-shaped territory's middle can be outside it. If so, centre on its
+  // A C-shaped territory's middle can be outside it. If so, center on its
   // system nearest the middle instead.
   let centre = mean;
   if (!rings?.some((ring) => pointInRing(mean, ring))) {
@@ -1171,17 +1339,25 @@ function constellationLayer(map: GalaxyMap): SVGGElement {
   return layer;
 }
 
-/** Thousands of faint, unnamed stars behind the systems, so the galaxy looks full. */
-function dust(seed: string, width = MAP_WIDTH, height = MAP_HEIGHT, count = DUST_COUNT): SVGGElement {
+/**
+ * Thousands of faint, unnamed stars behind the systems, so the galaxy looks
+ * full. With a `shape` (see sectorShape), most of it stays inside: specks
+ * outside are kept less and less often the further out they are.
+ */
+function dust(seed: string, width = MAP_WIDTH, height = MAP_HEIGHT, count = DUST_COUNT, shape?: (x: number, y: number) => number): SVGGElement {
   // A separate seed, so the dust doesn't change the systems' layout.
   const random = seededRandom(`${seed}/dust`);
   const group = svg('g', { class: 'dust', 'aria-hidden': 'true' });
   for (let i = 0; i < count; i++) {
     // Squaring makes most dust tiny, with a few brighter specks.
     const size = random() ** 2;
+    const x = random() * width;
+    const y = random() * height;
+    const keep = random();
+    if (shape && keep > Math.max(0.12, Math.min(1, 2.2 - 1.6 * shape(x, y)))) continue;
     group.append(svg('circle', {
-      cx: (random() * width).toFixed(1),
-      cy: (random() * height).toFixed(1),
+      cx: x.toFixed(1),
+      cy: y.toFixed(1),
       r: (0.5 + size * 1.3).toFixed(2),
       opacity: (0.15 + size * 0.45).toFixed(2),
     }));
@@ -1260,8 +1436,10 @@ function drawRegion(region: GalacticRegion, map: GalaxyMap, seed: string): SVGSV
       root.append(group);
     }
   });
-  // Yours goes last, so no neighbour's edge is drawn over its amber outline.
+  // Yours goes last, so no neighbor's edge is drawn over its amber outline.
   if (homeGroup) root.append(homeGroup);
+  // Fades everything but a picked one (see spotlight).
+  root.append(svg('rect', { x: -SHADE_MARGIN, y: -SHADE_MARGIN, width: 2 * SHADE_MARGIN, height: 2 * SHADE_MARGIN, class: 'focus-shade' }));
   return root;
 }
 
@@ -1391,8 +1569,10 @@ function drawGalaxy(galaxy: Galaxy, region: GalacticRegion, seed: string): SVGSV
       root.append(group);
     }
   });
-  // Yours goes last, so no neighbour's edge is drawn over its amber outline.
+  // Yours goes last, so no neighbor's edge is drawn over its amber outline.
   if (homeGroup) root.append(homeGroup);
+  // Fades everything but a picked one (see spotlight).
+  root.append(svg('rect', { x: -SHADE_MARGIN, y: -SHADE_MARGIN, width: 2 * SHADE_MARGIN, height: 2 * SHADE_MARGIN, class: 'focus-shade' }));
   return root;
 }
 
@@ -1442,25 +1622,6 @@ function systemNear(map: GalaxyMap, point: Point, within: number): number | null
   return best;
 }
 
-/** Stars in a system are lettered, the primary being A. */
-function starLetter(k: number): string {
-  return String.fromCharCode(65 + k);
-}
-
-/**
- * Each planet's name. Planets around the whole system are numbered outwards
- * after it ("Kessra II"); in a wide system, each star's planets are numbered
- * after that star ("Kessra B II").
- */
-function planetNames(system: StarSystem, planets: Planet[]): string[] {
-  const counts = new Map<number | null, number>();
-  return planets.map((planet) => {
-    const n = (counts.get(planet.host) ?? 0) + 1;
-    counts.set(planet.host, n);
-    return planet.host === null ? `${system.name} ${roman(n)}` : `${system.name} ${starLetter(planet.host)} ${roman(n)}`;
-  });
-}
-
 /**
  * In a wide system, each star's own orbits, in diagram units: the first
  * this far past the star's edge, the rest this far apart. Stars sit `gap`
@@ -1476,12 +1637,14 @@ const LABEL_ROOM = 34;
  * innermost first. In a wide system each star has its own planets: the
  * stars sit side by side, each with its own set of orbits, like small
  * systems of their own. Moons circle their planets slowly. Every body shows
- * its name on hover; planets are labelled with their name and type.
+ * its name on hover; planets are labeled with their name and type.
  *
- * Returns the drawing and how far it reaches from the centre across and
+ * Returns the drawing and how far it reaches from the center across and
  * down, for framing it.
  */
-function systemDiagram(map: GalaxyMap, index: number, planets: Planet[], seed: string): { parts: SVGElement[]; reach: { x: number; y: number } } {
+function systemDiagram(
+  map: GalaxyMap, index: number, planets: Planet[], seed: string, exits: SectorExit[],
+): { parts: SVGElement[]; reach: { x: number; y: number } } {
   const system = map.systems[index];
   const centre = SYSTEM_SIZE / 2;
   const names = planetNames(system, planets);
@@ -1507,7 +1670,7 @@ function systemDiagram(map: GalaxyMap, index: number, planets: Planet[], seed: s
 
   const drawStar = (star: StarType, k: number, x: number, y: number) => {
     const r = radius(star);
-    // A soft glow in the star's own colour.
+    // A soft glow in the star's own color.
     const haloId = `diagram-halo-${seed}-${k}`;
     const halo = svg('radialGradient', { id: haloId });
     halo.append(
@@ -1517,6 +1680,7 @@ function systemDiagram(map: GalaxyMap, index: number, planets: Planet[], seed: s
     defs.append(halo);
     back.append(svg('circle', { cx: x.toFixed(1), cy: y.toFixed(1), r: (r * 3.2).toFixed(1), fill: `url(#${haloId})`, class: 'diagram-halo' }));
     const node = starCircle(star, x, y, r, 'diagram-star');
+    node.setAttribute('data-star', String(k));
     const title = svg('title', {});
     title.textContent = `${system.name}${system.stars.length > 1 ? ` ${starLetter(k)}` : ''} · ${star.name}`;
     node.append(title);
@@ -1554,7 +1718,7 @@ function systemDiagram(map: GalaxyMap, index: number, planets: Planet[], seed: s
       group.append(spin);
     });
 
-    const body = svg('g', { class: 'diagram-planet-body' });
+    const body = svg('g', { class: 'diagram-planet-body', 'data-planet': k });
     const title = svg('title', {});
     title.textContent = `${name} · ${type.name}${planet.moons.length > 0 ? ` · ${planet.moons.length} moon${planet.moons.length === 1 ? '' : 's'}` : ''}`;
     body.append(title);
@@ -1641,35 +1805,61 @@ function systemDiagram(map: GalaxyMap, index: number, planets: Planet[], seed: s
   // Hyperlanes heading off past the planets, each pointing the way its
   // system really lies on the star map, dashed and flowing outwards like a
   // focused system's lanes there. Lanes into another constellation say so.
-  for (const n of connections(map, index)) {
-    const other = map.systems[n];
-    const angle = Math.atan2(other.y - system.y, other.x - system.x);
+  /**
+   * A lane heading off past the planets at `angle`, dashed and flowing
+   * outwards, with a name (and maybe a second line) at its end. `group` is
+   * what it's drawn into, so callers can make it clickable.
+   */
+  const laneOut = (group: SVGGElement, angle: number, hover: string, label: string, sublabel?: string) => {
     // Start where the lane leaves the box around everything drawn.
     const edge = Math.min(reach.x / Math.max(Math.abs(Math.cos(angle)), 1e-6), reach.y / Math.max(Math.abs(Math.sin(angle)), 1e-6));
     const at = (r: number) => ({ x: (centre + Math.cos(angle) * r).toFixed(1), y: (centre + Math.sin(angle) * r).toFixed(1) });
     const from = at(edge + LANE_OUT.start);
     const to = at(edge + LANE_OUT.end);
-    const group = svg('g', { class: 'diagram-lane', 'data-system': n, tabindex: 0 });
     const title = svg('title', {});
-    title.textContent = `Hyperlane to ${other.name}`;
+    title.textContent = hover;
     group.append(
       title,
       svg('line', { x1: from.x, y1: from.y, x2: to.x, y2: to.y, class: 'lane lit-lane exit-lane' }),
-      // A wide, invisible line over it, so it's easy to click.
+      // A wide, invisible line over it, so it's easy to hover or click.
       svg('line', { x1: from.x, y1: from.y, x2: to.x, y2: to.y, class: 'diagram-lane-hit' }),
     );
     // The name reads outwards from the lane's end: left-aligned on the right, right-aligned on the left.
     const place = at(edge + LANE_OUT.label);
     const anchor = Math.abs(Math.cos(angle)) < 0.3 ? 'middle' : Math.cos(angle) > 0 ? 'start' : 'end';
     const name = svg('text', { x: place.x, y: place.y, class: 'diagram-lane-name', 'text-anchor': anchor, 'dominant-baseline': 'central' });
-    name.textContent = other.name;
+    name.textContent = label;
     group.append(name);
-    if (other.constellation !== system.constellation) {
+    if (sublabel) {
       const where = svg('text', { x: place.x, y: (Number(place.y) + 14).toFixed(1), class: 'diagram-sublabel', 'text-anchor': anchor, 'dominant-baseline': 'central' });
-      where.textContent = `to ${map.constellations[other.constellation].name}`;
+      where.textContent = sublabel;
       group.append(where);
     }
     back.append(group);
+  };
+
+  // Hyperlanes to other systems, each pointing the way that system really
+  // lies on the star map. Lanes into another constellation say so; clicking
+  // one opens the system at its other end.
+  for (const n of connections(map, index)) {
+    const other = map.systems[n];
+    laneOut(
+      svg('g', { class: 'diagram-lane', 'data-system': n, tabindex: 0 }),
+      Math.atan2(other.y - system.y, other.x - system.x),
+      `Hyperlane to ${other.name}`,
+      other.name,
+      other.constellation !== system.constellation ? `to ${map.constellations[other.constellation].name}` : undefined,
+    );
+  }
+  // Lanes out of the sector, from a system on its edge. They lead nowhere yet.
+  for (const exit of exits.filter((e) => e.system === index)) {
+    laneOut(
+      svg('g', { class: 'diagram-sector-exit' }),
+      exit.angle,
+      `Hyperlane out of the sector, towards the ${exit.sector} Sector`,
+      `${exit.sector} Sector`,
+      'Leaves the sector',
+    );
   }
   return { parts: [defs, back, front], reach };
 }
@@ -1703,4 +1893,159 @@ function bodiesSection(map: GalaxyMap, index: number, planets: Planet[]): HTMLEl
   }
   section.append(list);
   return section;
+}
+
+// --- Right-click info ---
+
+function plural(n: number, word: string): string {
+  return `${n} ${word}${n === 1 ? '' : 's'}`;
+}
+
+/** What the right-click menu says about a star system as a whole. */
+function systemInfo(map: GalaxyMap, index: number, planets: Planet[]): MenuContent {
+  const system = map.systems[index];
+  const moons = planets.reduce((sum, p) => sum + p.moons.length, 0);
+  const wide = planets.some((p) => p.host !== null);
+  const facts: [string, string][] = [
+    ['Stars', describeStars(system.stars)],
+    ['Planets', `${planets.length} · ${plural(moons, 'moon')}`],
+    ['Hyperlanes', String(connections(map, index).length)],
+    ['Constellation', map.constellations[system.constellation].name],
+    ['Held by', ownerName(map, map.owners[index])],
+  ];
+  return {
+    eyebrow: index === map.home ? 'Star system · your capital' : 'Star system',
+    title: system.name,
+    subtitle: system.stars.length > 1 ? (wide ? 'Wide: each star has planets of its own' : 'Close: its planets circle all its stars') : undefined,
+    facts,
+    colour: system.stars[0].exotic === 'black-hole' ? ACCRETION_COLOUR : system.stars[0].colour,
+  };
+}
+
+/** What the right-click menu says about one of a system's stars. */
+function starInfo(map: GalaxyMap, index: number, k: number): MenuContent {
+  const system = map.systems[index];
+  const star = system.stars[k];
+  const facts: [string, string][] = [['Type', star.name], ['Temperature', star.temperature]];
+  if (system.stars.length > 1) facts.push(['Role', k === 0 ? 'Primary' : `Companion to ${system.name} A`]);
+  return {
+    eyebrow: star.exotic ? 'Stellar remnant' : 'Star',
+    title: system.stars.length > 1 ? `${system.name} ${starLetter(k)}` : system.name,
+    subtitle: star.name,
+    facts,
+    description: star.description,
+    colour: star.exotic === 'black-hole' ? ACCRETION_COLOUR : star.colour,
+  };
+}
+
+/** What the right-click menu says about a planet. */
+function planetInfo(map: GalaxyMap, index: number, planets: Planet[], k: number): MenuContent {
+  const system = map.systems[index];
+  const planet = planets[k];
+  const name = planetNames(system, planets)[k];
+  // Its place among the planets circling the same star (or stars), counting outwards.
+  const place = planets.slice(0, k + 1).filter((p) => p.host === planet.host).length;
+  // 1st, 2nd, 3rd, 4th... (and 11th, 12th, 13th).
+  const ordinal = (n: number) => {
+    const suffix = n % 100 >= 11 && n % 100 <= 13 ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' } as Record<number, string>)[n % 10] ?? 'th';
+    return `${n}${suffix}`;
+  };
+  const orbits = planet.host !== null ? `${system.name} ${starLetter(planet.host)}`
+    : system.stars.length > 1 ? `All ${system.stars.length} stars` : system.name;
+  // Moons by kind, like "2 · Rocky, Icy".
+  const kinds = [...new Set(planet.moons.map((m) => m.name.replace(/ moon$/, '')))];
+  const facts: [string, string][] = [
+    ['Type', planet.type.name],
+    ['Orbits', `${orbits}, ${ordinal(place)} out`],
+    ['Moons', planet.moons.length === 0 ? 'None' : `${planet.moons.length} · ${kinds.join(', ')}`],
+  ];
+  if (planet.type.ringed) facts.push(['Rings', 'Yes']);
+  return { eyebrow: 'Planet', title: name, subtitle: planet.type.name, facts, description: planet.type.description, colour: planet.type.colour };
+}
+
+/**
+ * Like focusing on the star map: fades the whole map under its shade (the
+ * last thing drawn), with only `picked` lifted above it. Whatever was lifted
+ * before goes back below, where it was. null clears the fade.
+ */
+function spotlight(map: SVGSVGElement, picked: Element | null): void {
+  const shade = map.querySelector(':scope > .focus-shade')!;
+  while (shade.nextElementSibling) map.insertBefore(shade.nextElementSibling, shade);
+  // Yours is always drawn last below the shade, so no neighbor's edge covers its outline.
+  const home = map.querySelector(':scope > .home');
+  if (home) map.insertBefore(home, shade);
+  map.classList.toggle('focused', picked !== null);
+  if (picked) map.append(picked);
+}
+
+// --- Exits to neighboring sectors ---
+
+/** How far a lane out of the sector runs past its system, and where the neighbor's name goes, in map units. */
+const EXIT = { length: 120, label: 132, edge: 24 };
+
+/** A hyperlane out of the sector: from one of its systems, heading `angle` (radians) towards a neighboring sector. */
+interface SectorExit {
+  system: number;
+  angle: number;
+  /** The sector it leads to, by its name on the region map. */
+  sector: string;
+}
+
+/**
+ * One way out of the sector towards each neighboring sector on the region
+ * map: the direction is that sector's from yours there, and the gateway is
+ * the system furthest out that way (no system serves two). PLACEHOLDER:
+ * the lanes lead nowhere yet.
+ */
+function sectorExits(map: GalaxyMap, region: GalacticRegion): SectorExit[] {
+  const home = region.sectors[region.home];
+  const used = new Set<number>();
+  const cx = MAP_WIDTH / 2;
+  const cy = MAP_HEIGHT / 2;
+  return region.sectors.flatMap((sector, i): SectorExit[] => {
+    // Neighbors are the hexagons touching yours: about two radii away.
+    if (i === region.home || Math.hypot(sector.x - home.x, sector.y - home.y) > SECTOR_RADIUS * 2) return [];
+    const angle = Math.atan2(sector.y - home.y, sector.x - home.x);
+    let best = -1;
+    let bestReach = -Infinity;
+    map.systems.forEach((system, k) => {
+      if (used.has(k)) return;
+      const reach = (system.x - cx) * Math.cos(angle) + (system.y - cy) * Math.sin(angle);
+      if (reach > bestReach) [best, bestReach] = [k, reach];
+    });
+    if (best === -1) return [];
+    used.add(best);
+    return [{ system: best, angle, sector: sector.name }];
+  });
+}
+
+/**
+ * The sector's exits, drawn as dashed lanes running off past its edge
+ * with the neighboring sector's name at the end. Kept inside the map, so
+ * the camera can always reach the name.
+ */
+function exitLayer(map: GalaxyMap, exits: SectorExit[]): SVGGElement {
+  const layer = svg('g', { class: 'sector-exits' });
+  const clampX = (x: number) => Math.min(MAP_WIDTH - EXIT.edge, Math.max(EXIT.edge, x));
+  const clampY = (y: number) => Math.min(MAP_HEIGHT - EXIT.edge, Math.max(EXIT.edge, y));
+  for (const exit of exits) {
+    const from = map.systems[exit.system];
+    const along = (d: number) => ({ x: clampX(from.x + Math.cos(exit.angle) * d), y: clampY(from.y + Math.sin(exit.angle) * d) });
+    const end = along(EXIT.length);
+    const place = along(EXIT.label);
+    const group = svg('g', { class: 'sector-exit' });
+    const title = svg('title', {});
+    title.textContent = `Hyperlane out of the sector, towards the ${exit.sector} Sector`;
+    // The name reads outwards from the lane's end: left-aligned on the right, right-aligned on the left.
+    const anchor = Math.abs(Math.cos(exit.angle)) < 0.3 ? 'middle' : Math.cos(exit.angle) > 0 ? 'start' : 'end';
+    const label = svg('text', { x: place.x.toFixed(1), y: place.y.toFixed(1), class: 'sector-exit-name', 'text-anchor': anchor, 'dominant-baseline': 'central' });
+    label.textContent = `${exit.sector} Sector`;
+    group.append(
+      title,
+      svg('line', { x1: from.x.toFixed(1), y1: from.y.toFixed(1), x2: end.x.toFixed(1), y2: end.y.toFixed(1), class: 'lane sector-exit-lane' }),
+      label,
+    );
+    layer.append(group);
+  }
+  return layer;
 }

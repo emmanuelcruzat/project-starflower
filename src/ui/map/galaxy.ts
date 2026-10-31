@@ -8,7 +8,7 @@ import { sectorName } from './generate';
 
 export const GALAXY_SIZE = 1700;
 export const GALAXY_CENTRE = GALAXY_SIZE / 2;
-/** Where each ring of regions starts and ends, from the centre out. The first ring's inside is the core. */
+/** Where each ring of regions starts and ends, from the center out. The first ring's inside is the core. */
 const RING_EDGES = [120, 285, 450, 615, 780];
 /** Regions in each ring. Outer rings have more, so regions stay roughly the same size. */
 const RING_COUNTS = [5, 9, 13, 17];
@@ -19,7 +19,7 @@ export const GALAXY_RADIUS = RING_EDGES[RING_EDGES.length - 1];
 
 export interface GalaxyRegion {
   name: string;
-  /** The region's wedge: between two radii and two angles (radians, clockwise from the right), around the galaxy's centre. */
+  /** The region's wedge: between two radii and two angles (radians, clockwise from the right), around the galaxy's center. */
   inner: number;
   outer: number;
   start: number;
