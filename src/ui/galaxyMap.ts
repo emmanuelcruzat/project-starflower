@@ -32,6 +32,12 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 const TERRITORY_RADIUS = 52;
 /** Font sizes for nation names written across their territory, in map units. */
 const NAME_SIZE = { min: 14, max: 44 };
+/**
+ * A territory needs this many systems before its nation's name is written
+ * across it. Smaller ones get their name `size` units tall, `above` units
+ * over their topmost system, clear of the stars and their tags.
+ */
+const SMALL_TERRITORY = { systems: 3, size: 11, above: 24 };
 /** Faint background stars. Decoration only: they can't be hovered and have no names. */
 const DUST_COUNT = 1800;
 const MAX_ZOOM = 3;
@@ -838,10 +844,7 @@ function systemPreview(map: GalaxyMap, index: number, planets: Planet[], seed: s
           transform: `rotate(-18 ${x.toFixed(1)} ${y.toFixed(1)})`,
         }));
       }
-      body.append(
-        svg('circle', { cx: x.toFixed(1), cy: y.toFixed(1), r: r.toFixed(2), fill: planet.type.colour }),
-        svg('circle', { cx: x.toFixed(1), cy: y.toFixed(1), r: r.toFixed(2), fill: 'url(#planet-shine)' }),
-      );
+      body.append(svg('circle', { cx: x.toFixed(1), cy: y.toFixed(1), r: r.toFixed(2), fill: planet.type.colour, class: 'planet-disc' }));
       bodies.append(body);
       reach = Math.max(reach, orbit);
       left = Math.min(left, host.x - orbit);
@@ -1194,16 +1197,6 @@ function drawMap(map: GalaxyMap, seed: string, exits: SectorExit[]): SVGSVGEleme
   const claimed = owners.flatMap((owner, i) => (owner === null ? [] : [i]));
   const cells = territoryCells(systems, claimed, TERRITORY_RADIUS);
   const defs = svg('defs', {});
-  // Shading laid over every planet in a system's miniature: a highlight at the top left
-  // fading to shadow at the bottom right, so flat circles look round.
-  const shine = svg('radialGradient', { id: 'planet-shine', cx: 0.35, cy: 0.32, r: 0.8 });
-  shine.append(
-    svg('stop', { offset: 0, 'stop-color': '#ffffff', 'stop-opacity': 0.55 }),
-    svg('stop', { offset: 0.4, 'stop-color': '#ffffff', 'stop-opacity': 0 }),
-    svg('stop', { offset: 0.7, 'stop-color': '#000000', 'stop-opacity': 0.1 }),
-    svg('stop', { offset: 1, 'stop-color': '#000000', 'stop-opacity': 0.55 }),
-  );
-  defs.append(shine);
   const territories = svg('g', { class: 'territories' });
 
   const names = svg('g', { class: 'territory-names', 'aria-hidden': 'true' });
@@ -1355,6 +1348,33 @@ function companionOffset(primary: StarType, companion: StarType, k: number): { d
 function territoryName(name: string, power: number, points: Point[], rings: Point[][] | null): SVGTextElement {
   const n = points.length;
   const mean = { x: points.reduce((sum, p) => sum + p.x, 0) / n, y: points.reduce((sum, p) => sum + p.y, 0) / n };
+
+  // Too small to write across: smaller, just above the systems. Two systems
+  // tilt it along the line between them, like the big names (kept within
+  // ±30° of level); a lone system's is level.
+  if (n < SMALL_TERRITORY.systems) {
+    let tilt = 0;
+    if (n === 2) {
+      let line = Math.atan2(points[1].y - points[0].y, points[1].x - points[0].x);
+      // Either way along the line reads the same; take the one nearer level.
+      if (line > Math.PI / 2) line -= Math.PI;
+      if (line < -Math.PI / 2) line += Math.PI;
+      tilt = Math.max(-30, Math.min(30, (line * 180) / Math.PI));
+    }
+    const x = mean.x.toFixed(1);
+    const y = (Math.min(...points.map((p) => p.y)) - SMALL_TERRITORY.above).toFixed(1);
+    const text = svg('text', {
+      x,
+      y,
+      class: `territory-name small power-${power}`,
+      'text-anchor': 'middle',
+      'dominant-baseline': 'central',
+      'font-size': SMALL_TERRITORY.size,
+      transform: `rotate(${tilt.toFixed(1)} ${x} ${y})`,
+    });
+    text.textContent = name;
+    return text;
+  }
 
   // The longest direction through the systems (their principal axis). Kept
   // within ±30° of level so the name stays easy to read.
@@ -1736,17 +1756,6 @@ function systemDiagram(
   const centre = SYSTEM_SIZE / 2;
   const names = planetNames(system, planets);
   const defs = svg('defs', {});
-  // The same round shading as the star map's miniature, defined here because a
-  // gradient inside a hidden map (the star map, while this shows) won't draw.
-  const shineId = `diagram-shine-${seed}`;
-  const shine = svg('radialGradient', { id: shineId, cx: 0.35, cy: 0.32, r: 0.8 });
-  shine.append(
-    svg('stop', { offset: 0, 'stop-color': '#ffffff', 'stop-opacity': 0.55 }),
-    svg('stop', { offset: 0.4, 'stop-color': '#ffffff', 'stop-opacity': 0 }),
-    svg('stop', { offset: 0.7, 'stop-color': '#000000', 'stop-opacity': 0.1 }),
-    svg('stop', { offset: 1, 'stop-color': '#000000', 'stop-opacity': 0.55 }),
-  );
-  defs.append(shine);
   const back = svg('g', { class: 'diagram-orbits' });
   const front = svg('g', { class: 'diagram-bodies' });
   const random = seededRandom(`${seed}/orbits/${index}`);
@@ -1814,10 +1823,7 @@ function systemDiagram(
     if (type.ringed) {
       body.append(svg('ellipse', { cx: px, cy: py, rx: (r * 1.7).toFixed(1), ry: (r * 0.5).toFixed(1), class: 'planet-ring', stroke: type.colour, transform: `rotate(-18 ${px} ${py})` }));
     }
-    body.append(
-      svg('circle', { cx: px, cy: py, r: r.toFixed(1), fill: type.colour }),
-      svg('circle', { cx: px, cy: py, r: r.toFixed(1), fill: `url(#${shineId})` }),
-    );
+    body.append(svg('circle', { cx: px, cy: py, r: r.toFixed(1), fill: type.colour, class: 'planet-disc' }));
     group.append(body);
 
     // Name and type under the planet, clear of its moons.

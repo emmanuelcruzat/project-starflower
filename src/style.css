@@ -1198,6 +1198,17 @@ body.game-mode .dev-banner {
   stroke-opacity: 0.7;
 }
 
+/* Planets are flat discs of their own color, no shading, with a thin dark
+   edge to set them off from their orbits. */
+.starmap .planet-disc {
+  stroke: rgba(0, 0, 0, 0.45);
+  stroke-width: 0.4;
+}
+
+.system-map .planet-disc {
+  stroke-width: 1.5;
+}
+
 .starmap .planet,
 .starmap .moon {
   cursor: default;
@@ -1321,6 +1332,14 @@ button.link-button.map-system-link:hover {
   margin: 8px 0 0;
   font-size: 0.8rem;
   color: var(--muted);
+}
+
+/* A small territory's name: just above its systems, level for one and
+   tilted along the line for two (galaxyMap.ts). It fades with zoom like
+   any territory's name. */
+.starmap .territory-name.small {
+  fill-opacity: 0.85;
+  letter-spacing: 0.12em;
 }
 
 /* Nation names across their territory. Purely a label: hovers pass through to the stars. */

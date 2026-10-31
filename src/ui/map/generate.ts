@@ -30,7 +30,8 @@ const MAX_CONSTELLATION_EXITS = 3;
 /** Extra links between constellations (beyond those that keep the map connected) are only this long. */
 const MAX_EXTRA_GATEWAY = 160;
 
-const PLAYER_SYSTEMS = 12;
+/** The player starts with their capital system alone; everything else is claimed later. */
+const PLAYER_SYSTEMS = 1;
 /** Stand-in neighbors so borders have something to meet. Varkesh appears in incidents.json. */
 const NEIGHBOUR_NAMES = ['Varkesh Hegemony', 'Ostrel Compact', 'Tamsin Free Worlds', 'Halcyne Directorate', 'Orun Ascendancy', 'Ysolde Concord'];
 const NEIGHBOUR_SYSTEMS = { min: 10, max: 22 };
