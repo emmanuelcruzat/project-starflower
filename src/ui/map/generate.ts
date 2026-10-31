@@ -95,7 +95,9 @@ export function generateMap(nation: Nation): GalaxyMap {
   const lanes = connectSystems(systems, constellations);
   const home = Math.floor(random() * systems.length);
   const powers: MapPower[] = [
-    { name: nation.name, isPlayer: true },
+    // "Union of Kessra": the full title minus its "The", to sit alongside
+    // the neighbours' names on the map.
+    { name: `${nation.prefix} of ${nation.name}`, isPlayer: true },
     ...NEIGHBOUR_NAMES.map((name) => ({ name, isPlayer: false })),
   ];
   const owners = assignTerritory(systems, lanes, home, powers.length, random);
@@ -230,8 +232,8 @@ export interface StarType {
   weight: number;
   /**
    * Size on the map, in map units. Hotter classes are bigger. Every star is
-   * at least 3.2, so drawn 2.4× in the planet rack it still outsizes the
-   * biggest planet there.
+   * at least 3.2, so it outsizes every planet in the system's miniature and
+   * diagram, which scale stars up more than planets.
    */
   radius: number;
   colour: string;
@@ -278,9 +280,9 @@ export interface PlanetType {
   /** Relative chance of a planet being this type. */
   weight: number;
   /**
-   * Size on the map, in map units. Always well below the smallest star's
-   * size in the planet rack (where stars are drawn double size), so the
-   * star is always the biggest body in its system.
+   * Base size, scaled up or down by the system's miniature and diagram.
+   * Always well below the smallest star's, so the star is always the
+   * biggest body in its system.
    */
   radius: number;
   colour: string;
@@ -318,7 +320,16 @@ export const MOON_TYPES: MoonType[] = [
 export interface Planet {
   type: PlanetType;
   moons: MoonType[];
+  /**
+   * The star it orbits, as an index into its system's stars, or null if it
+   * circles all of them together. In a close system every planet circles
+   * all the stars; in a wide one, each planet has a star of its own.
+   */
+  host: number | null;
 }
+
+/** How likely a system with more than one star is to be wide, its stars far enough apart to each keep their own planets. */
+const WIDE_SYSTEM_CHANCE = 0.5;
 
 /** Picks an item at random, so an item with weight 3 is three times as likely as one with weight 1. */
 function weighted<T extends { weight: number }>(items: T[], random: Random): T {
@@ -332,15 +343,21 @@ function weighted<T extends { weight: number }>(items: T[], random: Random): T {
  * depends on them. Generated when asked for, since only a focused system
  * shows its planets.
  */
-export function systemPlanets(nation: Nation, system: number): Planet[] {
+export function systemPlanets(nation: Nation, system: number, starCount: number): Planet[] {
   const random = seededRandom(`${nation.id}/planets/${system}`);
   const count = PLANETS_PER_SYSTEM.min + Math.floor(random() * (PLANETS_PER_SYSTEM.max - PLANETS_PER_SYSTEM.min + 1));
   const types = Array.from({ length: count }, () => weighted(PLANET_TYPES, random));
   // Moons have a stream of their own, so adding them didn't change any planets.
   const moonRandom = seededRandom(`${nation.id}/moons/${system}`);
+  // Which star each planet circles has a stream of its own too. The
+  // primary, being the biggest, holds on to twice as many as a companion.
+  const hostRandom = seededRandom(`${nation.id}/hosts/${system}`);
+  const wide = starCount > 1 && hostRandom() < WIDE_SYSTEM_CHANCE;
+  const hostWeights = Array.from({ length: starCount }, (_, k) => ({ k, weight: k === 0 ? 2 : 1 }));
   return types.map((type) => {
     const moons = type.moons.min + Math.floor(moonRandom() * (type.moons.max - type.moons.min + 1));
-    return { type, moons: Array.from({ length: moons }, () => weighted(MOON_TYPES, moonRandom)) };
+    const host = wide ? weighted(hostWeights, hostRandom).k : null;
+    return { type, moons: Array.from({ length: moons }, () => weighted(MOON_TYPES, moonRandom)), host };
   });
 }
 
@@ -377,7 +394,7 @@ function nameSettledSystems(systems: StarSystem[], owners: (number | null)[], ra
 const SECTOR_SYLLABLES = ['syn', 'ue', 'fe', 'eol', 'prou', 'pru', 'euq', 'hyp', 'io', 'bla', 'eo', 'dri', 'aae', 'phr', 'oea', 'col', 'gru', 'thu', 'oob', 'ae', 'wre', 'gie', 'scaa', 'ploi', 'mynoa', 'kyl', 'ix'];
 
 /** One or two capitalised words like "Synuefe" or "Eol Prou". */
-function sectorName(random: Random): string {
+export function sectorName(random: Random): string {
   const word = () => {
     const syllables = 1 + Math.floor(random() * 2);
     const text = Array.from({ length: syllables }, () => SECTOR_SYLLABLES[Math.floor(random() * SECTOR_SYLLABLES.length)]).join('');

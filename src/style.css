@@ -806,20 +806,23 @@ body.map-mode .tabs {
   background: rgba(6, 8, 13, 0.72);
 }
 
+/* Legend and note stacked down the left edge, under the header, so the
+   bottom of the map stays clear. */
 .map-footer {
   left: 16px;
-  right: 16px;
   bottom: 12px;
+  width: min(340px, calc(100% - 32px));
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 8px 16px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
 }
 
 .map-footer > * {
-  padding: 8px 12px;
+  padding: 12px 16px;
   background: rgba(6, 8, 13, 0.72);
+  border: 1px solid var(--panel-edge);
+  border-radius: 3px;
 }
 
 @media (max-width: 760px) {
@@ -920,49 +923,60 @@ body.map-mode .tabs {
   fill-opacity: 0.78;
 }
 
-/* The focused system's star and planets in a row: the star first, drawn
-   2.4× (RACK.starScale in galaxyMap.ts) so it's always the biggest body,
-   with a soft glow in its own colour. Its name moves down to clear it. */
-.starmap .system.racked .star,
-.starmap .system.racked:hover .star {
-  transform: scale(2.4);
+/* The focused system's miniature (systemPreview in galaxyMap.ts): its star
+   drawn 2x (PREVIEW.starScale) with a soft glow in its own colour, and its
+   companions drawn by the miniature instead, in their own places. */
+.starmap .system.previewed .star,
+.starmap .system.previewed:hover .star {
+  transform: scale(2);
   filter: drop-shadow(0 0 3px var(--star));
 }
 
-/* Companion stars get their own place in the rack, so the small ones
-   beside the primary step aside. */
-.starmap .system.racked .star.companion {
+.starmap .system.previewed .star.companion {
   display: none;
 }
 
-.starmap .planet-rack .rack-star {
-  filter: drop-shadow(0 0 3px var(--star));
+.starmap .system-preview .preview-star {
+  filter: drop-shadow(0 0 2px var(--star));
 }
 
-.starmap .system.racked .home-ring {
+.starmap .system.previewed .home-ring {
   transform: scale(1.7);
   transform-box: fill-box;
   transform-origin: center;
 }
 
-.starmap .system.racked .system-label {
-  transform: translateY(8px);
+/* The system's name is moved below the rings from galaxyMap.ts; this just eases it. */
+.starmap .system.previewed .system-label {
+  transition: opacity 0.15s, transform 0.2s;
 }
 
-/* The capital's ring grows with it, so its name drops a little further. */
-.starmap .system.home.racked .system-label {
-  transform: translateY(13px);
-}
-
-/* No frame: a soft dark blur behind the row keeps it readable over lanes. */
-.starmap .planet-rack-shadow {
+/* No frame: a soft dark blur behind the rings keeps them readable over lanes. */
+.starmap .preview-shadow {
   fill: #04060a;
   fill-opacity: 0.8;
   filter: blur(6px);
 }
 
-.starmap .planet-rack-axis {
-  stroke-width: 1;
+.starmap .preview-ring {
+  fill: none;
+  stroke-width: 0.5;
+  stroke-opacity: 0.35;
+  pointer-events: none;
+}
+
+/* In a wide system, the line joining its stars, dashed like their track in the diagram. */
+.starmap .preview-pair {
+  stroke: #5a7396;
+  stroke-opacity: 0.6;
+  stroke-dasharray: 2 2;
+}
+
+/* The faint ring round a planet that has moons. */
+.starmap .preview-moons {
+  fill: none;
+  stroke-width: 0.4;
+  stroke-opacity: 0.6;
 }
 
 .starmap .planet-ring {
@@ -980,17 +994,11 @@ body.map-mode .tabs {
 }
 
 .starmap .planet:hover {
-  transform: scale(1.4);
+  transform: scale(1.6);
 }
 
 .starmap .moon:hover {
   transform: scale(1.8);
-}
-
-/* Ties a planet to its column of moons. */
-.starmap .moon-tether {
-  stroke-width: 0.6;
-  stroke-opacity: 0.35;
 }
 
 /* A focused system and its connections keep their names showing. */
@@ -1115,7 +1123,13 @@ button.link-button.map-system-link:hover {
 }
 
 /* Nation names across their territory. Purely a label: hovers pass through to the stars. */
+/* Nation names are for the overview: they fade out as you zoom in from
+   --fade-start to --fade-end, leaving the stars and their names clear. --zoom
+   is set by MapControls in galaxyMap.ts. */
 .starmap .territory-name {
+  --fade-start: 1.15;
+  --fade-end: 1.7;
+  opacity: clamp(0, calc((var(--fade-end) - var(--zoom, 1)) / (var(--fade-end) - var(--fade-start))), 1);
   font-family: var(--sans);
   font-weight: 700;
   letter-spacing: 0.18em;
@@ -1132,10 +1146,9 @@ button.link-button.map-system-link:hover {
 
 .map-legend {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px 18px;
+  flex-direction: column;
+  gap: 6px;
   margin: 0;
-  padding: 0;
   list-style: none;
   font-size: 0.85rem;
 }
@@ -1144,6 +1157,11 @@ button.link-button.map-system-link:hover {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+/* System counts line up in a right-hand column. */
+.map-legend li .muted {
+  margin-left: auto;
 }
 
 .swatch {
@@ -1168,6 +1186,28 @@ button.link-button.map-system-link:hover {
 .starmap .lit-lane {
   stroke: #5a7396;
   pointer-events: none;
+}
+
+/* Lanes leading out of the focus: a system's hyperlanes, or a
+   constellation's gateways. Dashed, with the dashes flowing away from the
+   focus (each line is drawn from its inside end, see galaxyMap.ts). */
+.starmap .exit-lane {
+  stroke-dasharray: 6 4;
+  stroke-linecap: round;
+  animation: lane-flow 0.8s linear infinite;
+}
+
+@keyframes lane-flow {
+  to {
+    /* One full dash and gap, so the loop is seamless. */
+    stroke-dashoffset: -10;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .starmap .exit-lane {
+    animation: none;
+  }
 }
 
 .starmap .system {
@@ -1201,14 +1241,14 @@ button.link-button.map-system-link:hover {
    ACCRETION_COLOUR in galaxyMap.ts); a neutron star is a tiny, fierce
    blue-white point with a wide halo. */
 .starmap .system .star.black-hole,
-.starmap .planet-rack .star.black-hole {
+.starmap .system-preview .star.black-hole {
   stroke: #ffb36b;
   stroke-width: 1.1;
   filter: drop-shadow(0 0 2px #ffb36b);
 }
 
 .starmap .system .star.neutron,
-.starmap .planet-rack .star.neutron {
+.starmap .system-preview .star.neutron {
   filter: drop-shadow(0 0 1px #ffffff) drop-shadow(0 0 3px #8fc8ff);
 }
 
@@ -1245,9 +1285,8 @@ button.link-button.map-system-link:hover {
 }
 
 .map-note {
-  max-width: 460px;
   margin: 0;
-  padding: 8px 12px;
+  padding: 12px 16px;
   font-size: 0.85rem;
   color: var(--muted);
   border-left: 2px solid var(--accent-2);
@@ -1296,4 +1335,377 @@ button.link-button.map-system-link:hover {
 .dev-button:hover {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+/* --- Region view: the sectors around yours (see drawRegion in galaxyMap.ts) --- */
+
+/* Only one of the four maps shows at a time. */
+.map-viewport:not([data-view='system']) .system-map,
+.map-viewport:not([data-view='sector']) .sector-map,
+.map-viewport:not([data-view='region']) .region-map,
+.map-viewport:not([data-view='galaxy']) .galaxy-map {
+  display: none;
+}
+
+/* The legend and the note are about the borders in your sector, so they go with it. */
+.map-viewport:not([data-view='sector']) .map-footer {
+  display: none;
+}
+
+.region-map .sector {
+  cursor: pointer;
+  outline: none;
+}
+
+.region-map .sector-cell {
+  fill: #9fb3cf;
+  fill-opacity: 0.025;
+  stroke: #2b3a52;
+  stroke-width: 1.5;
+  transition: fill-opacity 0.15s, stroke 0.15s;
+}
+
+.region-map .sector:hover .sector-cell,
+.region-map .sector:focus-visible .sector-cell {
+  fill-opacity: 0.07;
+  stroke: #5a7396;
+}
+
+.region-map .sector.selected .sector-cell {
+  fill-opacity: 0.09;
+  stroke: var(--accent-2);
+  stroke-width: 2;
+}
+
+.region-map .sector.home .sector-cell {
+  fill: var(--accent);
+  fill-opacity: 0.08;
+  stroke: var(--accent);
+  stroke-width: 2.5;
+}
+
+.region-map .sector.home:hover .sector-cell,
+.region-map .sector.home:focus-visible .sector-cell {
+  fill-opacity: 0.16;
+}
+
+.region-map .sector-specks circle {
+  fill: #9fb3cf;
+  pointer-events: none;
+}
+
+.region-map .sector.home .sector-specks circle {
+  fill: #ffe3b8;
+}
+
+.region-map .sector-name,
+.region-map .sector-note {
+  font-family: var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  paint-order: stroke;
+  stroke: #04060a;
+  stroke-opacity: 0.7;
+  stroke-width: 4px;
+  pointer-events: none;
+  user-select: none;
+}
+
+.region-map .sector-name {
+  font-size: 15px;
+  fill: var(--muted);
+}
+
+.region-map .sector:hover .sector-name,
+.region-map .sector.selected .sector-name {
+  fill: var(--text);
+}
+
+.region-map .sector.home .sector-name {
+  font-size: 18px;
+  fill: var(--accent);
+}
+
+.region-map .sector-note {
+  font-size: 11px;
+  fill: var(--text);
+}
+
+/* Switching views by zooming: the region grows in from far away as you pull
+   out of your sector, and the sector grows out of its hexagon as you go
+   in. The origin is set to your sector's spot on screen in galaxyMap.ts. */
+@keyframes map-arrive-out {
+  from {
+    opacity: 0;
+    transform: scale(2.4);
+  }
+}
+
+@keyframes map-arrive-in {
+  from {
+    opacity: 0;
+    transform: scale(0.25);
+  }
+}
+
+.starmap.arrive-out {
+  animation: map-arrive-out 0.4s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+.starmap.arrive-in {
+  animation: map-arrive-in 0.4s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .starmap.arrive-out,
+  .starmap.arrive-in {
+    animation-duration: 0.01s;
+  }
+}
+
+/* --- Galaxy view: the regions around the core (see drawGalaxy in galaxyMap.ts) --- */
+
+.galaxy-map .galaxy-glow,
+.galaxy-map .galaxy-stars {
+  pointer-events: none;
+}
+
+.galaxy-map .galaxy-arms {
+  pointer-events: none;
+}
+
+.galaxy-map .galaxy-arms polyline {
+  fill: none;
+  stroke: #7f9cd6;
+  stroke-opacity: 0.16;
+  stroke-width: 70;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.galaxy-map .galaxy-region {
+  cursor: pointer;
+  outline: none;
+}
+
+.galaxy-map .region-cell {
+  fill: #9fb3cf;
+  fill-opacity: 0.015;
+  stroke: #2b3a52;
+  stroke-width: 1.5;
+  transition: fill-opacity 0.15s, stroke 0.15s;
+}
+
+.galaxy-map .galaxy-region:hover .region-cell,
+.galaxy-map .galaxy-region:focus-visible .region-cell {
+  fill-opacity: 0.06;
+  stroke: #5a7396;
+}
+
+.galaxy-map .galaxy-region.selected .region-cell {
+  fill-opacity: 0.08;
+  stroke: var(--accent-2);
+  stroke-width: 2;
+}
+
+.galaxy-map .galaxy-region.home .region-cell {
+  fill: var(--accent);
+  fill-opacity: 0.1;
+  stroke: var(--accent);
+  stroke-width: 2.5;
+}
+
+.galaxy-map .galaxy-region.home:hover .region-cell,
+.galaxy-map .galaxy-region.home:focus-visible .region-cell {
+  fill-opacity: 0.18;
+}
+
+.galaxy-map .region-name,
+.galaxy-map .region-note,
+.galaxy-map .galaxy-core-name {
+  font-family: var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  paint-order: stroke;
+  stroke: #04060a;
+  stroke-opacity: 0.7;
+  stroke-width: 4px;
+  pointer-events: none;
+  user-select: none;
+}
+
+.galaxy-map .region-name {
+  fill: var(--muted);
+}
+
+.galaxy-map .galaxy-region:hover .region-name,
+.galaxy-map .galaxy-region.selected .region-name {
+  fill: var(--text);
+}
+
+.galaxy-map .galaxy-region.home .region-name {
+  fill: var(--accent);
+}
+
+.galaxy-map .region-note {
+  font-size: 10px;
+  fill: var(--text);
+}
+
+.galaxy-map .galaxy-core-name {
+  font-size: 16px;
+  fill: #ffe3b8;
+  fill-opacity: 0.8;
+}
+
+/* --- System view: one system's orbits (see systemDiagram in galaxyMap.ts) --- */
+
+.system-map .diagram-orbits,
+.system-map .diagram-halo {
+  pointer-events: none;
+}
+
+.system-map .diagram-orbit {
+  fill: none;
+  stroke: #2b3a52;
+  stroke-width: 1.2;
+}
+
+/* Companion stars circle the primary on a tighter, dashed track. */
+.system-map .companion-orbit {
+  stroke-dasharray: 4 5;
+}
+
+.system-map .diagram-moon-orbit {
+  fill: none;
+  stroke: #2b3a52;
+  stroke-width: 0.6;
+  stroke-opacity: 0.8;
+  pointer-events: none;
+}
+
+.system-map .diagram-star {
+  filter: drop-shadow(0 0 6px var(--star));
+}
+
+.system-map .star.black-hole {
+  stroke: #ffb36b;
+  stroke-width: 3;
+  filter: drop-shadow(0 0 8px #ffb36b);
+}
+
+.system-map .star.neutron {
+  filter: drop-shadow(0 0 3px #ffffff) drop-shadow(0 0 12px #8fc8ff);
+}
+
+.system-map .diagram-planet-body {
+  cursor: default;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 0.15s;
+}
+
+.system-map .diagram-planet-body:hover {
+  transform: scale(1.15);
+}
+
+.system-map .planet-ring {
+  stroke-width: 2;
+}
+
+/* Each moon's ring turns around its planet (the origin is set per moon). */
+.system-map .moon-spin {
+  transform-box: view-box;
+  animation-name: moon-orbit;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@keyframes moon-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .system-map .moon-spin {
+    animation-play-state: paused;
+  }
+}
+
+.system-map .diagram-label,
+.system-map .diagram-sublabel {
+  font-family: var(--mono);
+  paint-order: stroke;
+  stroke: #04060a;
+  stroke-width: 4px;
+  stroke-opacity: 0.8;
+  pointer-events: none;
+  user-select: none;
+}
+
+.system-map .diagram-label {
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  fill: var(--text);
+}
+
+.system-map .diagram-star-label {
+  font-size: 15px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  fill: var(--accent-2);
+}
+
+.system-map .diagram-sublabel {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  fill: var(--muted);
+}
+
+/* The coloured dot beside each body in the panel's list. */
+.body-swatch {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+/* Hyperlanes leaving a system's diagram. Clicking one opens the system at its other end. */
+.system-map .diagram-lane {
+  cursor: pointer;
+  outline: none;
+  pointer-events: auto;
+}
+
+.system-map .diagram-lane .lit-lane {
+  stroke-width: 2;
+}
+
+.system-map .diagram-lane-hit {
+  stroke: transparent;
+  stroke-width: 18;
+}
+
+.system-map .diagram-lane-name {
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  fill: var(--muted);
+  paint-order: stroke;
+  stroke: #04060a;
+  stroke-width: 4px;
+  stroke-opacity: 0.8;
+  transition: fill 0.15s;
+}
+
+.system-map .diagram-lane:hover .diagram-lane-name,
+.system-map .diagram-lane:focus-visible .diagram-lane-name {
+  fill: var(--text);
+}
+
+.system-map .diagram-lane:hover .lit-lane,
+.system-map .diagram-lane:focus-visible .lit-lane {
+  stroke: #8aa3c4;
 }
