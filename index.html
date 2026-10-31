@@ -4,24 +4,268 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Project Starflower</title>
+    <meta name="description" content="Project Starflower: found a nation among the stars and steer it through crises, long operations and grand ambitions, in a strategy game that keeps running while you're away." />
   </head>
-  <body>
-    <header class="topbar">
-      <div>
-        <p class="brand">Project Starflower · Nation Planner</p>
-        <h1 id="nation-title">Project Starflower</h1>
-      </div>
-      <button id="new-nation" class="secondary" hidden>New Nation</button>
+  <body class="home">
+    <a class="skip-link" href="#content">Skip to content</a>
+
+    <header class="site-header">
+      <a class="wordmark" href="/" aria-label="Project Starflower, home">
+        <span class="wordmark-mark" aria-hidden="true"></span>
+        <span>Starflower</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+      <nav id="site-nav" class="site-nav" aria-label="Main">
+        <ul class="nav-links">
+          <li><a href="#game">The game</a></li>
+          <li><a href="#gameplay">Gameplay</a></li>
+          <li><a href="#newsletter">Updates</a></li>
+          <li><a href="#faq">FAQ</a></li>
+        </ul>
+        <div class="nav-actions">
+          <!-- PLACEHOLDER: accounts don't exist yet; the game saves in the browser. -->
+          <button class="btn btn-ghost" type="button" data-coming-soon="Accounts are coming soon. For now, your nation is saved in this browser.">Sign in</button>
+          <button class="btn btn-ghost" type="button" data-coming-soon="Accounts are coming soon. For now, your nation is saved in this browser.">Create account</button>
+          <a class="btn btn-primary" href="/play/">Play now</a>
+        </div>
+      </nav>
     </header>
+    <p class="toast" role="status" aria-live="polite" hidden></p>
 
-    <!-- Only shown when a data file has problems; helps while writing content. -->
-    <div id="dev-banner" class="dev-banner" hidden></div>
+    <main id="content">
+      <!-- 1. Hero, over a live star map drawn by main.ts. -->
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-map" aria-hidden="true"></div>
+        <div class="hero-hud" aria-hidden="true">
+          <span class="hud-tag hud-tl" data-hud="sector">Sector —</span>
+          <span class="hud-tag hud-tr" data-hud="systems">— systems</span>
+          <span class="hud-tag hud-bl" data-hud="coords">RA 00h 00m · DEC +00°</span>
+          <span class="hud-tag hud-br">Survey feed · live</span>
+        </div>
+        <div class="hero-inner">
+          <p class="eyebrow">A strategy game of nations and stars</p>
+          <h1 id="hero-title">Found a nation. Weather its crises. Claim the stars.</h1>
+          <p class="lead">
+            Starflower is a slow-burn strategy game that runs in your browser. Reports arrive
+            while you're away, operations unfold over hours, and every decision leaves its mark
+            on a young nation in a crowded sector of space.
+          </p>
+          <div class="hero-actions">
+            <a class="btn btn-primary btn-large" href="/play/">Play now</a>
+            <a class="btn btn-ghost btn-large" href="#gameplay">How it plays</a>
+          </div>
+          <dl class="status-panel">
+            <div><dt>Status</dt><dd><span class="status-dot" aria-hidden="true"></span>Early prototype</dd></div>
+            <div><dt>Platform</dt><dd>Desktop browser</dd></div>
+            <div><dt>Price</dt><dd>Free to play</dd></div>
+            <div><dt>Progress</dt><dd>Saved in your browser</dd></div>
+          </dl>
+        </div>
+        <a class="scroll-cue" href="#game">Scroll</a>
+      </section>
 
-    <main id="screen"></main>
+      <!-- 2. The pitch. -->
+      <section id="game" class="pitch" aria-labelledby="pitch-title">
+        <p class="eyebrow">The sector</p>
+        <h2 id="pitch-title">One capital. Six rivals. Hundreds of stars.</h2>
+        <p>
+          You begin with a single star system and a government of your choosing. Around you lies a
+          sector of constellations, voids and contested borders, already home to six other powers.
+          Grow the nation, keep it together, and decide how far it reaches.
+        </p>
+        <a class="text-link" href="#gameplay">See how a nation grows →</a>
+      </section>
 
-    <!-- Only shown with ?dev in the URL. -->
-    <div id="dev-panel" class="dev-panel" hidden></div>
+      <!-- 3. Gameplay: four pillars. -->
+      <section id="gameplay" class="gameplay" aria-labelledby="gameplay-title">
+        <div class="section-head">
+          <p class="eyebrow">Gameplay</p>
+          <h2 id="gameplay-title">Four ways to shape a nation</h2>
+        </div>
+        <ol class="pillar-index" aria-label="Pillars">
+          <li><a href="#pillar-found"><span>01</span>Found</a></li>
+          <li><a href="#pillar-decide"><span>02</span>Decide</a></li>
+          <li><a href="#pillar-direct"><span>03</span>Direct</a></li>
+          <li><a href="#pillar-chart"><span>04</span>Chart</a></li>
+        </ol>
 
-    <script type="module" src="/src/main.ts"></script>
+        <article id="pillar-found" class="pillar">
+          <div class="pillar-text">
+            <p class="pillar-number">01 · Found</p>
+            <h3>Choose who rules</h3>
+            <p>
+              Name your nation and pick its government: a democracy, a monarchy, a corporate state,
+              a military junta, a technocracy and more. Each starts with its own strengths and its
+              own blind spots.
+            </p>
+            <ul class="pillar-points">
+              <li>Six statistics, from economy to cohesion</li>
+              <li>A title that changes as your standing does</li>
+              <li>An encyclopedia entry that writes itself</li>
+            </ul>
+          </div>
+          <figure class="pillar-visual">
+            <div class="mock mock-stats">
+              <p class="mock-label">Democracy · starting position</p>
+              <div class="stat"><span>Economy</span><span class="bar"><span style="width: 40%"></span></span><span>40</span></div>
+              <div class="stat"><span>Technology</span><span class="bar"><span style="width: 35%"></span></span><span>35</span></div>
+              <div class="stat"><span>Military</span><span class="bar"><span style="width: 25%"></span></span><span>25</span></div>
+              <div class="stat"><span>Liberties</span><span class="bar"><span style="width: 70%"></span></span><span>70</span></div>
+              <div class="stat"><span>Cohesion</span><span class="bar"><span style="width: 55%"></span></span><span>55</span></div>
+            </div>
+            <figcaption>Starting statistics for a democracy</figcaption>
+          </figure>
+        </article>
+
+        <article id="pillar-decide" class="pillar pillar-flip">
+          <div class="pillar-text">
+            <p class="pillar-number">02 · Decide</p>
+            <h3>Answer what the sector sends you</h3>
+            <p>
+              Incidents arrive every few hours, whether you're watching or not: smugglers, strikes,
+              scandals and strangers at the border. Each one asks you to choose, and every choice
+              moves your nation somewhere.
+            </p>
+            <ul class="pillar-points">
+              <li>Reports keep arriving while you're away</li>
+              <li>A full queue means news goes unheard</li>
+              <li>Outcomes depend on the nation you've built</li>
+            </ul>
+          </div>
+          <figure class="pillar-visual">
+            <div class="mock mock-incident">
+              <p class="mock-label">Incident · arrived 6m ago</p>
+              <p class="mock-title">A Captain With No Manifest</p>
+              <ol class="mock-choices">
+                <li>Take the cut. Customs can take the afternoon off.</li>
+                <li>Recruit her. The state could use a captain who goes unnoticed.</li>
+                <li>Impound the ship and its cargo.</li>
+              </ol>
+            </div>
+            <figcaption>An incident waiting for a decision</figcaption>
+          </figure>
+        </article>
+
+        <article id="pillar-direct" class="pillar">
+          <div class="pillar-text">
+            <p class="pillar-number">03 · Direct</p>
+            <h3>Commit to the long game</h3>
+            <p>
+              Launch operations that run in stages over hours or days, and give orders as each stage
+              ends. Set an ambition for the nation to work toward, and see it through.
+            </p>
+            <ul class="pillar-points">
+              <li>Up to three operations running at once</li>
+              <li>Decisions at every stage</li>
+              <li>Ambitions that take days to fulfill</li>
+            </ul>
+          </div>
+          <figure class="pillar-visual">
+            <div class="mock mock-operation">
+              <p class="mock-label">Operation · 3 stages</p>
+              <p class="mock-title">Fleet Modernization Program</p>
+              <ol class="stages">
+                <li class="done"><span>1</span>Fleet Assessment</li>
+                <li class="active"><span>2</span>Refit Priorities<span class="stage-bar"><span></span></span></li>
+                <li><span>3</span>The New Line</li>
+              </ol>
+            </div>
+            <figcaption>An operation partway through its second stage</figcaption>
+          </figure>
+        </article>
+
+        <article id="pillar-chart" class="pillar pillar-flip">
+          <div class="pillar-text">
+            <p class="pillar-number">04 · Chart</p>
+            <h3>Map a living sector</h3>
+            <p>
+              Every nation gets its own generated sector: hundreds of systems in named
+              constellations, joined by hyperlanes and broken by vast voids. Open any system to see
+              its stars and planets, and claim the ones you want.
+            </p>
+            <ul class="pillar-points">
+              <li>Red dwarfs to hypergiants, white dwarfs to black holes</li>
+              <li>Planets, moons and rings in every system</li>
+              <li>Borders that grow with every claim</li>
+            </ul>
+          </div>
+          <figure class="pillar-visual">
+            <div class="mock mock-map" data-map-crop></div>
+            <figcaption>A constellation on the star map</figcaption>
+          </figure>
+        </article>
+      </section>
+
+      <!-- 4. Newsletter (PLACEHOLDER: nothing is sent yet). -->
+      <section id="newsletter" class="newsletter" aria-labelledby="newsletter-title">
+        <div>
+          <p class="eyebrow">Updates</p>
+          <h2 id="newsletter-title">Follow development</h2>
+          <p>Get a short note when something new lands: more of the map, new incidents, diplomacy.</p>
+        </div>
+        <form class="newsletter-form" novalidate>
+          <label for="newsletter-email">Email address</label>
+          <div class="newsletter-row">
+            <input id="newsletter-email" type="email" name="email" autocomplete="email" placeholder="you@example.com" />
+            <button class="btn btn-primary" type="submit">Subscribe</button>
+          </div>
+          <p class="form-note" data-form-note>Coming soon: sign-ups aren't open yet, and nothing you enter is sent.</p>
+        </form>
+      </section>
+
+      <!-- 5. FAQ. -->
+      <section id="faq" class="faq" aria-labelledby="faq-title">
+        <div class="section-head">
+          <p class="eyebrow">Questions</p>
+          <h2 id="faq-title">Frequently asked</h2>
+        </div>
+        <details>
+          <summary>Can I play it now?</summary>
+          <p>Yes. Starflower is an early prototype, but it's playable today in a desktop browser. Choose <a href="/play/">Play now</a> to found a nation.</p>
+        </details>
+        <details>
+          <summary>Does it cost anything?</summary>
+          <p>No. It's free to play, with nothing to install.</p>
+        </details>
+        <details>
+          <summary>Where is my progress saved?</summary>
+          <p>In the browser you play in. There are no accounts yet, so clearing your browser's site data, or playing on another device, starts a new nation.</p>
+        </details>
+        <details>
+          <summary>Does the game keep going while I'm away?</summary>
+          <p>Yes. Time passes in the real world: incidents arrive and operations progress while the page is closed, and everything catches up when you return.</p>
+        </details>
+        <details>
+          <summary>What's coming next?</summary>
+          <p>More of the sector: territory that matters, travel between systems, and neighbors to negotiate with. Accounts will follow, so a nation can travel with you.</p>
+        </details>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-brand">
+        <a class="wordmark" href="/"><span class="wordmark-mark" aria-hidden="true"></span><span>Starflower</span></a>
+        <p>A strategy game of nations and stars. Early prototype, free to play in your browser.</p>
+      </div>
+      <nav class="footer-links" aria-label="Footer">
+        <div>
+          <p class="footer-heading">Play</p>
+          <ul>
+            <li><a href="/play/">Play now</a></li>
+            <li><a href="#gameplay">Gameplay</a></li>
+          </ul>
+        </div>
+        <div>
+          <p class="footer-heading">Follow</p>
+          <ul>
+            <li><a href="#newsletter">Updates</a></li>
+            <li><a href="#faq">FAQ</a></li>
+          </ul>
+        </div>
+      </nav>
+      <p class="footer-legal">© 2026 Project Starflower</p>
+    </footer>
+
+    <script type="module" src="/src/home/main.ts"></script>
   </body>
 </html>
