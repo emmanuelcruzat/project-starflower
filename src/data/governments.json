@@ -1,0 +1,38 @@
+[
+  {
+    "id": "democracy",
+    "name": "Democracy",
+    "description": "Elected councils, a free press, and endless debate. Strong liberties; slow to act.",
+    "startingStats": { "population": 800, "economy": 40, "technology": 35, "military": 25, "liberties": 70, "cohesion": 55 }
+  },
+  {
+    "id": "monarchy",
+    "name": "Monarchy",
+    "description": "A royal house whose claim goes back to the first colony ships. Loyal subjects, old traditions.",
+    "startingStats": { "population": 900, "economy": 35, "technology": 25, "military": 35, "liberties": 35, "cohesion": 62 }
+  },
+  {
+    "id": "corporate_state",
+    "name": "Corporate State",
+    "description": "A board of directors governs, and citizens hold shares rather than votes. Rich, efficient, and not very sentimental.",
+    "startingStats": { "population": 700, "economy": 58, "technology": 40, "military": 25, "liberties": 30, "cohesion": 45 }
+  },
+  {
+    "id": "military_junta",
+    "name": "Military Junta",
+    "description": "The admiralty took power during a crisis and never gave it back. Strong fleets, short tempers.",
+    "startingStats": { "population": 750, "economy": 28, "technology": 30, "military": 55, "liberties": 15, "cohesion": 50 }
+  },
+  {
+    "id": "technocracy",
+    "name": "Technocracy",
+    "description": "Scientists and engineers rule by expertise. Brilliant research; unpopular with people who aren't experts.",
+    "startingStats": { "population": 600, "economy": 42, "technology": 55, "military": 22, "liberties": 45, "cohesion": 52 }
+  },
+  {
+    "id": "theocracy",
+    "name": "Theocracy",
+    "description": "The faithful govern according to doctrine carried from Old Earth. Devout, united, and suspicious of outsiders.",
+    "startingStats": { "population": 850, "economy": 30, "technology": 22, "military": 30, "liberties": 25, "cohesion": 70 }
+  }
+]

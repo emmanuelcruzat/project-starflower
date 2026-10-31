@@ -1,0 +1,44 @@
+{
+  "powerWeights": { "economy": 0.3, "military": 0.3, "technology": 0.2, "population": 0.2 },
+  "power": [
+    { "name": "Irrelevant", "min": 0 },
+    { "name": "Doormat", "min": 15 },
+    { "name": "Footnote", "min": 25 },
+    { "name": "Noteworthy", "min": 35 },
+    { "name": "Emergent", "min": 45 },
+    { "name": "Contender", "min": 55 },
+    { "name": "Minor Power", "min": 65 },
+    { "name": "Intermediate Power", "min": 75 },
+    { "name": "Major Power", "min": 85 },
+    { "name": "Great Power", "min": 93 }
+  ],
+  "cohesion": [
+    { "name": "Nonexistent", "min": 0, "description": "This nation pretty much only exists on paper, and there is no ruling authority whatsoever." },
+    { "name": "Shattered", "min": 5, "description": "This nation's central government has completely broken down into numerous micro-states." },
+    { "name": "Fragmented", "min": 12, "description": "This nation has been split into several powerful warlord states, each competing for control of the nation." },
+    { "name": "Divided", "min": 20, "description": "This nation has splintered into two or more opposed factions that are either in a civil war or approaching one." },
+    { "name": "Fragile", "min": 28, "description": "This nation's central government maintains a very fragile hold on its territories, and many of its citizens are considering revolt." },
+    { "name": "Little", "min": 36, "description": "This nation's established government has a weak, but relatively secure, control over its systems." },
+    { "name": "Moderate", "min": 44, "description": "This nation's ruling officials exercise a moderate amount of authority which, while by no means absolute, is generally respected." },
+    { "name": "Reasonable", "min": 52, "description": "This nation is reasonably stable, with its citizens and military supporting the current government." },
+    { "name": "Good", "min": 60, "description": "This nation is quite stable, without any major unrest." },
+    { "name": "Great", "min": 68, "description": "This nation has achieved a high level of cohesion, and anything more than minor protesting is completely unheard of." },
+    { "name": "Remarkable", "min": 76, "description": "This nation's government has achieved a level of cohesion among its citizens that is truly impressive." },
+    { "name": "Fantastic", "min": 83, "description": "This nation has a level of cohesion where even political squabbles are rare." },
+    { "name": "Benchmark", "min": 90, "description": "This nation's populace is fully united and eager to advance their homeland." },
+    { "name": "Eerie", "min": 95, "description": "This nation's populace is so compliant with the government and each other that visitors find them somewhat creepy." },
+    { "name": "Absolute", "min": 99, "description": "This nation, surely by some unethical means, has cultivated a populace with practically no free will." }
+  ],
+  "military": [
+    { "name": "None", "min": 0 },
+    { "name": "Very Weak", "min": 5 },
+    { "name": "Weak", "min": 15 },
+    { "name": "Small", "min": 25 },
+    { "name": "Adequate", "min": 35 },
+    { "name": "Decent", "min": 45 },
+    { "name": "Strong", "min": 55 },
+    { "name": "Powerful", "min": 68 },
+    { "name": "Huge", "min": 80 },
+    { "name": "Massive", "min": 92 }
+  ]
+}

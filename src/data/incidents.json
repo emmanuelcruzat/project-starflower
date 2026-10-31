@@ -1,0 +1,965 @@
+[
+  {
+    "id": "derelict_found",
+    "title": "Ghost in the Kessra System",
+    "description": "A Vindicator-class cruiser of foreign make has drifted into the Kessra border system. Its hull is scarred by railgun fire, with no transponder and no life signs. The border patrol wants to know what to do with it, and three salvage guilds have already filed claims.\n\nOut here, a wreck belongs to whoever gets to it first.",
+    "weight": 3,
+    "condition": {
+      "minAgeHours": 1
+    },
+    "choices": [
+      {
+        "text": "Strip it to the frame. Reactor, weapons, armour plate, everything.",
+        "effects": {
+          "economy": 4,
+          "technology": 3
+        },
+        "setFlags": [
+          "salvaged_warship"
+        ],
+        "result": "Salvage crews work nine days straight. The engineers who catalogue the parts start asking for a lot more time and a lot more budget."
+      },
+      {
+        "text": "Hail its owners and offer to return it.",
+        "effects": {
+          "economy": 2,
+          "cohesion": 1
+        },
+        "setFlags": [
+          "returned_wreck_voluntarily"
+        ],
+        "result": "The Varkesh Hegemony collects the hulk with formal thanks and a modest finder's fee. Your diplomats note that someone over there now owes you one."
+      },
+      {
+        "text": "Sell its coordinates to the highest bidder.",
+        "effects": {
+          "economy": 5,
+          "cohesion": -2
+        },
+        "setFlags": [
+          "sold_wreck_coords"
+        ],
+        "result": "The buyer pays in untraceable chits and never gives a name. Within a week the wreck is gone, and so is any record that it was ever here."
+      }
+    ],
+    "dismiss": {
+      "effects": {
+        "military": -1
+      },
+      "result": "The border patrol logs the wreck and leaves it drifting. A month later it's gone, stripped by someone who wasn't waiting for permission."
+    }
+  },
+  {
+    "id": "derelict_beacon",
+    "title": "Something Is Still Transmitting",
+    "description": "Engineers sorting the Vindicator's salvage found a sealed module running on its own power. It's a military distress beacon, and it has been broadcasting on an encrypted band since the day the wreck was hauled in.\n\nWhoever it's calling has had weeks to listen.",
+    "weight": 4,
+    "condition": {
+      "requiresFlags": [
+        "salvaged_warship"
+      ],
+      "minAgeHours": 4
+    },
+    "choices": [
+      {
+        "text": "Put a plasma cutter through it. Now.",
+        "effects": {
+          "cohesion": -2
+        },
+        "setFlags": [
+          "beacon_destroyed"
+        ],
+        "result": "The signal stops. An engineer swears it changed frequency in the last second before it died. You tell her she's imagining things."
+      },
+      {
+        "text": "Crack the encryption before anyone answers it.",
+        "effects": {
+          "economy": -2,
+          "technology": 2
+        },
+        "setFlags": [
+          "beacon_active"
+        ],
+        "result": "Two weeks of work turns up foreign fleet codes three years out of date, and confirmation that the beacon was heard. The reply came from somewhere inside your borders."
+      }
+    ],
+    "dismiss": {
+      "setFlags": [
+        "beacon_active"
+      ],
+      "result": "The beacon keeps transmitting from its warehouse. Workers start taking the long way around it."
+    }
+  },
+  {
+    "id": "derelict_claim_foreign",
+    "title": "The Varkesh Hegemony Comes Calling",
+    "description": "A Varkesh frigate drops out of warp a little too close to your orbital shipyards, gunports open. Its commander wants the Vindicator's salvage returned, the people responsible named, and an explanation he can put in a report.\n\nHe does not look like a man who enjoys paperwork.",
+    "weight": 5,
+    "condition": {
+      "requiresFlags": [
+        "beacon_active"
+      ],
+      "forbidsFlags": [
+        "warship_resolved"
+      ]
+    },
+    "choices": [
+      {
+        "text": "Return everything we still have, and apologize.",
+        "effects": {
+          "technology": -3,
+          "cohesion": -2
+        },
+        "setFlags": [
+          "warship_resolved",
+          "salvage_returned"
+        ],
+        "result": "The commander accepts the crates without a word. The newsfeeds call it a humiliation, but the frigate leaves without firing a shot."
+      },
+      {
+        "text": "Offer a \"recovery fee\" to make the report disappear.",
+        "effects": {
+          "economy": -4
+        },
+        "setFlags": [
+          "warship_resolved",
+          "bribed_varkesh"
+        ],
+        "result": "The commander pockets the fee and files a report about a reactor breach, no survivors, nothing recovered. He'll remember the favour. So will you."
+      },
+      {
+        "text": "Tell him finders keepers. This is our space.",
+        "effects": {
+          "cohesion": 5,
+          "military": -1
+        },
+        "setFlags": [
+          "warship_resolved",
+          "defied_varkesh"
+        ],
+        "result": "The frigate leaves. Crowds cheer in the capital. Somewhere in the Varkesh archives, your nation now has a file."
+      }
+    ],
+    "dismiss": {
+      "effects": {
+        "cohesion": -3
+      },
+      "setFlags": [
+        "warship_resolved",
+        "defied_varkesh"
+      ],
+      "result": "You let the frigate's hails go unanswered. After three days it fires a single shot into an empty moon and leaves. Message received, on both sides."
+    }
+  },
+  {
+    "id": "derelict_claim_pirates",
+    "title": "Clan Varr Wants Its Prize",
+    "description": "Six ships with rust-red hulls slip into the Kessra system. Their leader calls herself Mother Varr, and explains over an open channel that her clan caught the Vindicator's beacon before you silenced it. They had been tracking that wreck for a month.\n\n\"You owe us a cut. Call it a finder's fee in reverse.\"",
+    "weight": 5,
+    "condition": {
+      "requiresFlags": [
+        "beacon_destroyed"
+      ],
+      "forbidsFlags": [
+        "warship_resolved"
+      ]
+    },
+    "choices": [
+      {
+        "text": "Pay her a third of what the salvage was worth.",
+        "effects": {
+          "economy": -4
+        },
+        "setFlags": [
+          "warship_resolved",
+          "paid_clan_varr"
+        ],
+        "result": "Mother Varr counts it twice and leaves you a frequency to call \"if anyone ever bothers you.\" You hope you never need it."
+      },
+      {
+        "text": "Send the border fleet to drive them off.",
+        "effects": {
+          "military": -2,
+          "cohesion": 3
+        },
+        "setFlags": [
+          "warship_resolved",
+          "fought_clan_varr"
+        ],
+        "result": "A short, ugly battle. Clan Varr retreats with two ships fewer, and so does your border fleet. The public loves it."
+      },
+      {
+        "text": "Fortify Kessra and wait for her to try it.",
+        "effects": {
+          "economy": -2,
+          "military": 2
+        },
+        "setFlags": [
+          "warship_resolved"
+        ],
+        "result": "New gun platforms go up across the system. Clan Varr studies them for a day and leaves. Mother Varr's last transmission is a single word: \"Noted.\""
+      }
+    ],
+    "dismiss": {
+      "effects": {
+        "economy": -5,
+        "cohesion": -2
+      },
+      "setFlags": [
+        "warship_resolved"
+      ],
+      "result": "With no answer from you, Clan Varr takes its cut the hard way: three freighters boarded and stripped in a single night."
+    }
+  },
+  {
+    "id": "labour_grievance",
+    "title": "Blood in the Belt",
+    "description": "A pressure seal failed on a mining rig in the outer belts. Forty miners are dead. The Belt Workers' Union has a list of safety violations as long as your arm, and a recording of the corporate foreman ignoring complaints.\n\n\"The Union wants to know whose side the government is on.\"",
+    "weight": 3,
+    "condition": {
+      "minAgeHours": 2
+    },
+    "choices": [
+      {
+        "text": "Fund full safety refits across the belts.",
+        "effects": {
+          "economy": -4,
+          "cohesion": 4,
+          "liberties": 2
+        },
+        "setFlags": [
+          "miners_placated"
+        ],
+        "result": "The refits take months and cost a fortune. On the day the last rig is certified, someone leaves a hand-welded steel flower on the steps of your ministry."
+      },
+      {
+        "text": "Promise an inquiry. Inquiries take time.",
+        "effects": {
+          "cohesion": -2
+        },
+        "setFlags": [
+          "miners_angry"
+        ],
+        "result": "The Union delegation listens to your promise, nods once, and leaves without shaking hands."
+      },
+      {
+        "text": "Remind the Union that the miners signed waivers.",
+        "effects": {
+          "economy": 2,
+          "cohesion": -4,
+          "liberties": -2
+        },
+        "setFlags": [
+          "miners_angry",
+          "miners_insulted"
+        ],
+        "result": "The mining corporations send their compliments. In the belts, someone paints your face on a mining charge."
+      }
+    ],
+    "dismiss": {
+      "effects": {
+        "cohesion": -3
+      },
+      "setFlags": [
+        "miners_angry"
+      ],
+      "result": "The government says nothing. In the belts, silence is taken as an answer."
+    }
+  },
+  {
+    "id": "labour_strike",
+    "title": "The Drills Fall Silent",
+    "description": "The Belt Workers' Union has walked out. Every rig in the outer belts is shut down, ore freighters sit empty at the docks, and the industrial worlds have started rationing raw materials.\n\nThe Union says they'll go back to work when the safety refits are funded, and not a minute before.",
+    "weight": 5,
+    "condition": {
+      "requiresFlags": [
+        "miners_angry"
+      ],
+      "minAgeHours": 6
+    },
+    "choices": [
+      {
+        "text": "Meet their demands in full.",
+        "effects": {
+          "economy": -6,
+          "cohesion": 5,
+          "liberties": 2
+        },
+        "clearFlags": [
+          "miners_angry"
+        ],
+        "setFlags": [
+          "strike_settled"
+        ],
+        "result": "The drills spin up within the hour. The Union throws a party on the largest rig and, to everyone's surprise, invites your labour minister."
+      },
+      {
+        "text": "Send security forces to escort replacement crews.",
+        "effects": {
+          "cohesion": -6,
+          "liberties": -5,
+          "military": 1
+        },
+        "clearFlags": [
+          "miners_angry"
+        ],
+        "setFlags": [
+          "strike_broken"
+        ],
+        "result": "Replacement crews work under armed guard, and production resumes at half speed. The Union halls go very quiet. Too quiet."
+      },
+      {
+        "text": "Wait them out. Their savings will run dry before ours.",
+        "effects": {
+          "economy": -5,
+          "cohesion": -3
+        },
+        "clearFlags": [
+          "miners_angry"
+        ],
+        "setFlags": [
+          "strike_broken"
+        ],
+        "result": "Six weeks later the miners trickle back to work, one shift at a time. They don't forget."
+      }
+    ],
+    "dismiss": {
+      "effects": {
+        "economy": -7,
+        "cohesion": -4
+      },
+      "clearFlags": [
+        "miners_angry"
+      ],
+      "setFlags": [
+        "strike_broken"
+      ],
+      "result": "The strike runs its course without you. It ends in exhaustion, not agreement, and the belts stay bitter."
+    }
+  },
+  {
+    "id": "refinery_sabotage",
+    "title": "Fire at the Refineries",
+    "description": "At 0300 capital time, the largest ore refinery in the outer belts went up. Emergency crews saved the habitat ring, but the smelters are slag. Security found Union symbols spray-painted on a maintenance hatch.\n\nNobody has claimed it. Nobody needs to.",
+    "weight": 4,
+    "condition": {
+      "requiresFlags": [
+        "strike_broken"
+      ],
+      "minAgeHours": 12
+    },
+    "choices": [
+      {
+        "text": "Rebuild, and quietly offer the Union a seat on the safety board.",
+        "effects": {
+          "economy": -5,
+          "cohesion": 4,
+          "liberties": 2
+        },
+        "setFlags": [
+          "union_reconciled"
+        ],
+        "result": "The Union takes the seat. Nobody mentions the fire. The new refinery is the safest in the galaxy."
+      },
+      {
+        "text": "Arrest the Union leadership.",
+        "effects": {
+          "cohesion": -6,
+          "liberties": -6
+        },
+        "setFlags": [
+          "union_crushed"
+        ],
+        "result": "Twelve arrests, no confessions. The leaders' faces start appearing on habitat walls, painted overnight."
+      },
+      {
+        "text": "Blame pirates publicly, and rebuild in silence.",
+        "effects": {
+          "economy": -5,
+          "cohesion": 1
+        },
+        "result": "The story holds, mostly. The public believes it. The miners know better, and they know you know."
+      }
+    ],
+    "dismiss": {
+      "effects": {
+        "economy": -6,
+        "cohesion": -2
+      },
+      "result": "The refinery stays a ruin for months while ministries argue over whose budget should rebuild it."
+    }
+  },
+  {
+    "id": "smuggler_offer",
+    "title": "A Captain With No Manifest",
+    "description": "The freighter Saint Ilse's Luck has docked at your capital's main port with a cargo hold her captain won't open and a manifest that's mostly blank lines. Captain Rhea Marrow is charming and unhurried, and she's offering the customs ministry a percentage of \"future business\" if its inspectors develop poor eyesight.",
+    "weight": 3,
+    "choices": [
+      {
+        "text": "Take the cut. Customs can take the afternoon off.",
+        "effects": {
+          "economy": 4,
+          "cohesion": -1
+        },
+        "setFlags": [
+          "took_smuggler_cut"
+        ],
+        "result": "The money arrives on time and in full. Marrow says she'll be back. She says it like a promise."
+      },
+      {
+        "text": "Recruit her. The state could use a captain who goes unnoticed.",
+        "effects": {
+          "liberties": -1
+        },
+        "setFlags": [
+          "marrow_recruited",
+          "intelligence_mandate"
+        ],
+        "result": "Marrow listens to the offer, laughs, and signs. Your cabinet now has an intelligence asset and, it turns out, a mandate to build more of them."
+      },
+      {
+        "text": "Impound the ship and its cargo.",
+        "effects": {
+          "economy": 3,
+          "military": 1
+        },
+        "setFlags": [
+          "impounded_smuggler"
+        ],
+        "result": "The hold is full of military-grade combat stims. Marrow is escorted off the station, smiling like she knows something you don't."
+      }
+    ],
+    "dismiss": {
+      "effects": {
+        "cohesion": -1
+      },
+      "result": "Customs handles it however customs likes. Profitably, for customs."
+    }
+  },
+  {
+    "id": "customs_audit",
+    "title": "The Revenue Inspectorate Finds the Money",
+    "description": "Your own Revenue Inspectorate has traced Captain Marrow's payments to a customs ministry account. The chief inspector is very polite, very thorough, and wants to know whether to publish her report.",
+    "weight": 4,
+    "condition": {
+      "requiresFlags": [
+        "took_smuggler_cut"
+      ],
+      "minAgeHours": 6
+    },
+    "choices": [
+      {
+        "text": "Publish it, and accept the consequences.",
+        "effects": {
+          "economy": -3,
+          "cohesion": -3,
+          "liberties": 3
+        },
+        "clearFlags": [
+          "took_smuggler_cut"
+        ],
+        "result": "The scandal dominates the newsfeeds for a week. Then, slowly, people start to say that at least this government admits its mistakes."
+      },
+      {
+        "text": "Bury the report.",
+        "effects": {
+          "liberties": -4
+        },
+        "setFlags": [
+          "buried_audit"
+        ],
+        "result": "The chief inspector is promoted to a very comfortable post on a very distant world. The report is sealed for fifty years."
+      },
+      {
+        "text": "Blame the customs chief and fire him publicly.",
+        "effects": {
+          "cohesion": -1,
+          "liberties": -1
+        },
+        "result": "The customs chief protests that he was following orders. Nobody can prove whose."
+      }
+    ],
+    "dismiss": {
+      "effects": {
+        "cohesion": -5
+      },
+      "result": "With no instructions, the inspector does her job. The report leaks to the press within a day, along with the fact that you sat on it."
+    }
+  },
+  {
+    "id": "smuggler_revenge",
+    "title": "Marrow's Friends",
+    "description": "A parked cargo hauler explodes at the capital's main port. Nobody is hurt, but the message is clear. An anonymous transmission follows: return the Saint Ilse's Luck, with interest, or the next one goes off during shift change.",
+    "weight": 3,
+    "condition": {
+      "requiresFlags": [
+        "impounded_smuggler"
+      ],
+      "minAgeHours": 6
+    },
+    "choices": [
+      {
+        "text": "Return the ship and pay the \"interest\".",
+        "effects": {
+          "economy": -3,
+          "cohesion": -3
+        },
+        "result": "The Saint Ilse's Luck departs with a fresh coat of paint. Every smuggler in the galaxy now knows your nation can be made to pay."
+      },
+      {
+        "text": "Put the military on the docks.",
+        "effects": {
+          "economy": -2,
+          "liberties": -2,
+          "cohesion": 2
+        },
+        "result": "Marines patrol the port for a month. No more bombs, but citizens grumble about being searched on the way to work."
+      },
+      {
+        "text": "Put a bounty on Rhea Marrow's head.",
+        "effects": {
+          "economy": -3,
+          "cohesion": 2
+        },
+        "setFlags": [
+          "bounty_on_marrow",
+          "intelligence_mandate"
+        ],
+        "result": "Bounty hunters start drifting into port bars. The cabinet quietly approves funding to track Marrow's network, and anyone else's."
+      }
+    ],
+    "dismiss": {
+      "effects": {
+        "cohesion": -5,
+        "population": -2
+      },
+      "result": "The second bomb goes off at shift change, exactly as promised."
+    }
+  },
+  {
+    "id": "refugee_convoy",
+    "title": "Convoy Out of the Dark",
+    "description": "Two hundred battered transports have arrived at your border, broadcasting a universal distress code. They carry sixty million refugees from the Kessel Reach, where a corporate war burned three worlds to the ground. Life support on the convoy is failing.",
+    "weight": 2,
+    "condition": {
+      "minAgeHours": 3
+    },
+    "choices": [
+      {
+        "text": "Open the borders. Everyone gets a home.",
+        "effects": {
+          "population": 60,
+          "economy": -3,
+          "cohesion": -3,
+          "liberties": 3
+        },
+        "result": "Housing is tight and tempers run hot, but nobody dies on your watch. Some of the newcomers are engineers. Some of them are trouble."
+      },
+      {
+        "text": "Take them in, on condition they work the mining belts.",
+        "effects": {
+          "population": 60,
+          "economy": 2,
+          "cohesion": -5,
+          "liberties": -3
+        },
+        "result": "The belts welcome the extra hands. The refugees welcome the air. Neither welcomes the other."
+      },
+      {
+        "text": "Refuel them and send them onward.",
+        "effects": {
+          "economy": -1,
+          "cohesion": 1
+        },
+        "result": "The convoy limps off towards the next nation. Your citizens are relieved. You try not to think about how far away the next nation is."
+      }
+    ],
+    "dismiss": {
+      "effects": {
+        "cohesion": -4,
+        "liberties": -2
+      },
+      "result": "The convoy waits at the border for nine days. Then, one by one, its ships stop broadcasting."
+    }
+  },
+  {
+    "id": "pirate_tribute",
+    "title": "The Toll Collectors",
+    "description": "A pirate battle group has parked on a major trade lane and is \"inspecting\" every freighter that passes. Its captain is happy to move along, for a reasonable consideration.",
+    "weight": 2,
+    "repeatable": true,
+    "condition": {
+      "minAgeHours": 3,
+      "maxStats": {
+        "military": 60
+      }
+    },
+    "choices": [
+      {
+        "text": "Pay the toll.",
+        "effects": {
+          "economy": -3
+        },
+        "result": "The pirates move along. Traffic resumes. You get the feeling this won't be their last visit."
+      },
+      {
+        "text": "Send the navy.",
+        "effects": {
+          "economy": -1,
+          "military": 1,
+          "cohesion": 2
+        },
+        "result": "The pirates fire a few warning shots and withdraw. Your crews come home scorched, proud, and a little more experienced."
+      },
+      {
+        "text": "Arm the merchant fleet and let them defend themselves.",
+        "effects": {
+          "economy": -2,
+          "military": 1,
+          "liberties": 1
+        },
+        "result": "Freighter captains collect their new turrets with grim satisfaction. The next pirate to try an inspection gets a surprise."
+      }
+    ],
+    "dismiss": {
+      "effects": {
+        "economy": -4,
+        "cohesion": -2
+      },
+      "result": "A dozen freighters are stripped before the pirates get bored. Insurance rates triple across the nation."
+    }
+  },
+  {
+    "id": "national_day",
+    "title": "Founding Day",
+    "description": "The anniversary of the nation's founding is coming up. The festival committees want to know what the government has planned, and whether there's anything in the budget for it.",
+    "weight": 1,
+    "repeatable": true,
+    "condition": {
+      "minAgeHours": 24
+    },
+    "choices": [
+      {
+        "text": "Throw the biggest celebration in the galaxy.",
+        "effects": {
+          "economy": -3,
+          "cohesion": 6
+        },
+        "result": "Fireworks over every capital, real food in every canteen, and a hangover that lasts two days. Nobody complains."
+      },
+      {
+        "text": "Something modest. Speeches and a parade.",
+        "effects": {
+          "economy": -1,
+          "cohesion": 2
+        },
+        "result": "The parade is short, the speeches are long, and the founders' descendants wave from the front row."
+      },
+      {
+        "text": "A military review over the capital.",
+        "effects": {
+          "economy": -2,
+          "military": 1,
+          "cohesion": 3,
+          "liberties": -1
+        },
+        "result": "Warships pass low over the crowds in perfect formation. Some people find it stirring. Others find it a little pointed."
+      }
+    ],
+    "dismiss": {
+      "effects": {
+        "cohesion": -3
+      },
+      "result": "Citizens celebrate anyway, without the government. Someone proposes a toast to \"better leaders.\""
+    }
+  },
+  {
+    "id": "research_grant",
+    "title": "The Professor's Proposal",
+    "description": "Dr. Haldane Rusk, formerly of a prestigious foreign academy (he's vague about the \"formerly\"), wants state funding for an applied research institute. He promises better sensors, more efficient industry, and possibly a cure for the common hull breach.",
+    "weight": 2,
+    "repeatable": true,
+    "condition": {
+      "minAgeHours": 2,
+      "maxStats": {
+        "technology": 70
+      }
+    },
+    "choices": [
+      {
+        "text": "Fund the institute from the national budget.",
+        "effects": {
+          "economy": -4,
+          "technology": 3
+        },
+        "result": "Rusk delivers, eventually, after two small fires and one incident nobody is allowed to discuss."
+      },
+      {
+        "text": "Partner with industry. They'll own the patents.",
+        "effects": {
+          "economy": -1,
+          "technology": 2,
+          "liberties": -1
+        },
+        "result": "Corporate money makes the work faster. The patents make the corporations richer. Everyone is satisfied except the public."
+      }
+    ],
+    "dismiss": {
+      "effects": {
+        "technology": -1
+      },
+      "result": "Rusk takes his proposal to a neighbouring nation, which funds it the same week."
+    }
+  },
+  {
+    "id": "motherlode",
+    "title": "Motherlode",
+    "description": "Survey drones have found an iridium vein in asteroid KX-41 rich enough to make the rest of your mining belts look like gravel. Word is already out. The Union, the mining corporations, and at least one pirate clan are \"very interested.\"",
+    "weight": 2,
+    "condition": {
+      "minAgeHours": 4
+    },
+    "choices": [
+      {
+        "text": "Grant the claim to the Belt Workers' Union.",
+        "effects": {
+          "economy": 2,
+          "cohesion": 4
+        },
+        "result": "The Union works KX-41 like it's sacred ground. The state's cut is small, but loyalty in the belts is worth a lot."
+      },
+      {
+        "text": "Auction it to the mining corporations.",
+        "effects": {
+          "economy": 7,
+          "cohesion": -2
+        },
+        "result": "The winning bid is staggering. Corporate crews arrive within a week, with their own equipment and their own security."
+      },
+      {
+        "text": "Nationalize it. The state will mine it directly.",
+        "effects": {
+          "economy": 5,
+          "cohesion": 1,
+          "liberties": -2
+        },
+        "setFlags": [
+          "nationalized_kx41"
+        ],
+        "result": "The nation now owns an iridium mine. The Union and the corporations agree on something for the first time in years: they hate it."
+      }
+    ],
+    "dismiss": {
+      "effects": {
+        "economy": 1,
+        "cohesion": -3
+      },
+      "result": "Claim-jumpers race to KX-41. Three crews are dead before the first ore ships out."
+    }
+  },
+  {
+    "id": "garden_world_survey",
+    "title": "Survey Report: A Garden World",
+    "description": "A long-range survey ship has returned from the frontier with remarkable news. The fourth planet of an unclaimed system has breathable air, liquid oceans and native plant life. It's rare enough out here that the survey captain hand-delivered the report.",
+    "weight": 4,
+    "condition": {
+      "minAgeHours": 1
+    },
+    "choices": [
+      {
+        "text": "Claim it for colonization.",
+        "setFlags": [
+          "habitable_world_found"
+        ],
+        "result": "The colonial office starts drawing up plans. A world like this could be home to millions. (The Establish a Colony operation is now available.)"
+      },
+      {
+        "text": "Declare it a protected nature reserve.",
+        "effects": {
+          "cohesion": 2,
+          "liberties": 1,
+          "technology": 1
+        },
+        "setFlags": [
+          "garden_world_protected"
+        ],
+        "result": "Scientists celebrate, and ecology students fill the waiting lists for research permits. The world stays wild."
+      },
+      {
+        "text": "Sell the survey data to a corporate developer.",
+        "effects": {
+          "economy": 4,
+          "cohesion": -1
+        },
+        "result": "A developer pays handsomely. The brochures for \"Paradise IV\" are already being printed."
+      }
+    ],
+    "dismiss": {
+      "result": "The report is filed and forgotten. Somewhere in the archives, a garden world waits."
+    }
+  },
+  {
+    "id": "leaked_cable",
+    "title": "The Leaked Cable",
+    "description": "A diplomatic cable from a foreign embassy has leaked to your press. In it, the ambassador describes your nation as \"a soft target, rich in secrets and poor in caution.\" Your cabinet is furious, and your intelligence chief has been waiting years for a moment like this.",
+    "weight": 2,
+    "condition": {
+      "minAgeHours": 6
+    },
+    "choices": [
+      {
+        "text": "Give the intelligence chief what she wants: a real spy service.",
+        "effects": {
+          "economy": -1
+        },
+        "setFlags": [
+          "intelligence_mandate"
+        ],
+        "result": "The cabinet approves a mandate for foreign intelligence work. (The Establish a Spy Network operation is now available.)"
+      },
+      {
+        "text": "Publish our own response, openly and calmly.",
+        "effects": {
+          "liberties": 2,
+          "cohesion": 2
+        },
+        "result": "Your measured reply goes viral across the galaxy. The ambassador is quietly recalled."
+      },
+      {
+        "text": "Expel the ambassador.",
+        "effects": {
+          "cohesion": 3,
+          "economy": -2
+        },
+        "result": "The ambassador leaves within the day. Trade with his nation cools noticeably."
+      }
+    ],
+    "dismiss": {
+      "effects": {
+        "cohesion": -2
+      },
+      "result": "The government says nothing, and the newsfeeds conclude that the ambassador was right."
+    }
+  },
+  {
+    "id": "separatist_broadcast",
+    "title": "The Separatist Broadcast",
+    "description": "A pirate broadcast has taken over the public channels in three outer systems. Masked speakers call the central government illegitimate and urge citizens to stop paying taxes. Local officials report that people are listening.",
+    "weight": 3,
+    "repeatable": true,
+    "condition": {
+      "maxStats": {
+        "cohesion": 30
+      }
+    },
+    "choices": [
+      {
+        "text": "Offer the outer systems real concessions.",
+        "effects": {
+          "economy": -3,
+          "cohesion": 5,
+          "liberties": 2
+        },
+        "result": "Tax relief and a seat at the table take the heat out of the movement. For now."
+      },
+      {
+        "text": "Jam the broadcast and arrest the speakers.",
+        "effects": {
+          "cohesion": 3,
+          "liberties": -6
+        },
+        "result": "The channels go silent. Order returns to the outer systems, and so does fear."
+      }
+    ],
+    "dismiss": {
+      "effects": {
+        "cohesion": -4,
+        "population": -10
+      },
+      "result": "The broadcasts continue. Some families pack up and leave the nation altogether."
+    }
+  },
+  {
+    "id": "budget_review",
+    "title": "The Treasury's Annual Review",
+    "description": "The finance ministry has finished its review of the national budget and needs a decision on taxes before the next fiscal cycle. The tax collectors want more. The public wants less. The ministry, as usual, wants a decision by yesterday.",
+    "weight": 2,
+    "repeatable": true,
+    "condition": {
+      "minAgeHours": 6
+    },
+    "choices": [
+      {
+        "text": "Raise taxes across the board.",
+        "effects": {
+          "economy": 5,
+          "cohesion": -3
+        },
+        "result": "The treasury fills up. So do the protest squares."
+      },
+      {
+        "text": "Cut taxes and let the economy breathe.",
+        "effects": {
+          "economy": -2,
+          "cohesion": 2,
+          "population": 5
+        },
+        "result": "Businesses expand, families feel richer, and the treasury tightens its belt."
+      },
+      {
+        "text": "Close the loopholes the wealthy use.",
+        "effects": {
+          "economy": 3,
+          "liberties": -1,
+          "cohesion": 1
+        },
+        "result": "A handful of very rich people are very upset. Everyone else is quietly pleased."
+      }
+    ],
+    "dismiss": {
+      "result": "The budget rolls over unchanged for another year. Nobody is happy, and nobody is especially unhappy."
+    }
+  },
+  {
+    "id": "trade_delegation",
+    "title": "A Trade Delegation Arrives",
+    "description": "A delegation from a prosperous neighbouring nation has docked at the capital with an offer: lower tariffs on both sides, and open access to each other's markets. Your industrialists are split. Some see a fortune; others see foreign goods flooding the shops.",
+    "weight": 2,
+    "repeatable": true,
+    "condition": {
+      "minAgeHours": 4
+    },
+    "choices": [
+      {
+        "text": "Sign a balanced trade deal.",
+        "effects": {
+          "economy": 4,
+          "technology": 1
+        },
+        "result": "Freighters start running in both directions. Your markets fill with new goods, and some with new ideas."
+      },
+      {
+        "text": "Open the markets completely.",
+        "effects": {
+          "economy": 6,
+          "cohesion": -2
+        },
+        "result": "Trade booms. So do the complaints from the industries that couldn't compete."
+      },
+      {
+        "text": "Protect domestic industry.",
+        "effects": {
+          "economy": 1,
+          "cohesion": 2
+        },
+        "result": "The delegation leaves politely. The factory towns cheer."
+      }
+    ],
+    "dismiss": {
+      "effects": {
+        "economy": -1
+      },
+      "result": "The delegation waits a week for an answer, then takes its offer to your rivals."
+    }
+  }
+]

@@ -1,0 +1,58 @@
+[
+  {
+    "id": "grand_fleet_expansion",
+    "title": "Grand Fleet Expansion",
+    "description": "Lay down a new generation of capital ships in every shipyard the nation owns. The docks will run around the clock for months, and the treasury will feel every rivet.",
+    "condition": { "minStats": { "economy": 30 } },
+    "durationHours": 96,
+    "startEffects": { "economy": -4 },
+    "dailyEffects": { "military": 2, "economy": -0.5 },
+    "completionEffects": { "military": 6, "cohesion": 2 },
+    "setFlags": ["grand_fleet"],
+    "completionText": "The new fleet passes in review over the capital: forty hulls, fresh from the yards. Neighbours who used to ignore your transmissions have started answering them promptly."
+  },
+  {
+    "id": "universal_education",
+    "title": "Universal Education Initiative",
+    "description": "Free schooling to the doctorate for every citizen on every world, paid for by the state. A generation from now, the nation will think faster than its rivals.",
+    "durationHours": 72,
+    "dailyEffects": { "technology": 1, "economy": -0.5 },
+    "completionEffects": { "technology": 4, "liberties": 2 },
+    "setFlags": ["educated_populace"],
+    "completionText": "The first graduating class fills the capital's largest stadium. Somewhere among them is the engineer who will one day design your warp gates."
+  },
+  {
+    "id": "internal_security",
+    "title": "Internal Security Apparatus",
+    "description": "Build a ministry that watches the watchers, and everyone else too. Order will improve. Privacy will not.",
+    "durationHours": 72,
+    "startEffects": { "economy": -2 },
+    "dailyEffects": { "cohesion": 1, "liberties": -1 },
+    "completionEffects": { "cohesion": 3 },
+    "setFlags": ["security_apparatus", "intelligence_mandate"],
+    "completionText": "The ministry's new headquarters has no windows and no name on the door. Crime is down. So is conversation in public places."
+  },
+  {
+    "id": "warp_gate_survey",
+    "title": "Warp Gate Survey",
+    "description": "Before anyone builds a warp gate, someone has to map the gravity wells between your core systems precisely enough to thread a needle across light-years. Step one of two.",
+    "condition": { "minStats": { "technology": 40 } },
+    "durationHours": 48,
+    "dailyEffects": { "economy": -0.5 },
+    "completionEffects": { "technology": 2 },
+    "setFlags": ["warp_survey_complete"],
+    "completionText": "The survey fleet returns with the most detailed gravitational map of your space ever made. The engineers say a gate network is possible. Expensive, but possible."
+  },
+  {
+    "id": "core_warp_gates",
+    "title": "Core Warp Gate Network",
+    "description": "Build warp gates linking the core systems, so civilian freighters and military fleets can cross the nation in hours instead of weeks. The largest construction project in the nation's history. Step two of two.",
+    "condition": { "requiresFlags": ["warp_survey_complete"] },
+    "durationHours": 120,
+    "startEffects": { "economy": -6 },
+    "dailyEffects": { "economy": -0.5 },
+    "completionEffects": { "economy": 10, "military": 4, "cohesion": 4, "population": 50 },
+    "setFlags": ["core_warp_gates"],
+    "completionText": "The first gate flares to life, and a grain freighter crosses four systems in an afternoon. Markets boom, fleets reposition overnight, and for the first time the core worlds feel like one nation."
+  }
+]

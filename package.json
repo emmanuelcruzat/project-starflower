@@ -1,0 +1,16 @@
+{
+  "name": "starflower-ii",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "check": "tsc"
+  },
+  "devDependencies": {
+    "typescript": "~5.6.3",
+    "vite": "^6.0.0"
+  }
+}

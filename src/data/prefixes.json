@@ -1,0 +1,18 @@
+[
+  { "name": "Union" },
+  { "name": "United Planets" },
+  { "name": "United Systems" },
+  { "name": "Confederation" },
+  { "name": "Confederated Systems" },
+  { "name": "State" },
+  { "name": "Republic", "condition": { "governments": ["democracy", "technocracy", "military_junta"] } },
+  { "name": "Democratic Republic", "condition": { "governments": ["democracy"], "minStats": { "liberties": 50 } } },
+  { "name": "People's Republic", "condition": { "governments": ["democracy", "technocracy", "military_junta"] } },
+  { "name": "Kingdom", "condition": { "governments": ["monarchy"] } },
+  { "name": "Corporate State", "condition": { "governments": ["corporate_state"] } },
+  { "name": "Technocracy", "condition": { "governments": ["technocracy"] } },
+  { "name": "Military Junta", "condition": { "governments": ["military_junta"] } },
+  { "name": "Dominion", "condition": { "governments": ["monarchy", "military_junta", "theocracy"], "minStats": { "military": 30 } } },
+  { "name": "Holy Nation", "condition": { "governments": ["theocracy"] } },
+  { "name": "Police State", "condition": { "maxStats": { "liberties": 25 } } }
+]

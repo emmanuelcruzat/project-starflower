@@ -1,0 +1,1299 @@
+/* Colours and fonts are defined once here, so retheming means editing this block only. */
+:root {
+  --bg: #06080d;
+  --panel: #0d121b;
+  --panel-raised: #111824;
+  --panel-edge: #1d2838;
+  --text: #c8d2df;
+  --muted: #6c7b90;
+  --accent: #f0a23c; /* amber: titles and primary actions */
+  --accent-2: #4ec3d8; /* cyan: headings and readouts */
+  --good: #5fcf8a;
+  --bad: #e2605a;
+  --mono: ui-monospace, 'Cascadia Mono', Consolas, 'Courier New', monospace;
+  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(ellipse at top, #111a2b 0%, var(--bg) 65%) fixed;
+  color: var(--text);
+  font-family: var(--sans);
+  line-height: 1.55;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* --- Header --- */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 20px 16px 4px;
+}
+
+.brand,
+.eyebrow {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.topbar h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.dev-banner {
+  max-width: 1248px;
+  margin: 12px auto 0;
+  padding: 8px 12px;
+  border: 1px solid var(--bad);
+  background: #2a1214;
+  color: #ffb4ae;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+}
+
+/* --- Layout --- */
+
+#screen {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+/* --- Tabs --- */
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--panel-edge);
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: -1px;
+  padding: 8px 14px;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border: 1px solid transparent;
+  border-radius: 3px 3px 0 0;
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.tab.selected {
+  color: var(--accent);
+  background: var(--panel);
+  border-color: var(--panel-edge);
+  border-bottom-color: var(--panel);
+}
+
+.badge {
+  min-width: 18px;
+  padding: 0 5px;
+  font-size: 0.7rem;
+  line-height: 18px;
+  text-align: center;
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 9px;
+}
+
+/* --- Nation Overview tab: nation panel | dashboard --- */
+
+.overview-layout {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 760px) {
+  .overview-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.attention {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--muted);
+}
+
+.attention.urgent {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.attention button.secondary {
+  margin-top: 0;
+}
+
+.summary-list {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+}
+
+.summary-list li {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--panel-edge);
+}
+
+.summary-list li:last-child {
+  border-bottom: none;
+}
+
+.summary-list .small-text {
+  margin: 0;
+}
+
+.summary-name {
+  display: block;
+  margin-top: 8px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.summary-list .summary-name {
+  margin-top: 0;
+}
+
+.awaiting-tag {
+  margin-top: 4px;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--panel-edge);
+  border-radius: 4px;
+  padding: 16px;
+}
+
+.planner {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-bottom: 12px;
+}
+
+.section-title {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-weight: normal;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent-2);
+}
+
+.section-title.spaced {
+  margin-top: 24px;
+  margin-bottom: 8px;
+}
+
+.subsection-title {
+  margin: 20px 0 8px;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: normal;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.small-text {
+  font-size: 0.8rem;
+  margin: 6px 0;
+}
+
+.body-text {
+  margin: 8px 0;
+}
+
+/* --- Cards (incidents, operations, ambitions) --- */
+
+.card {
+  display: block;
+  margin-top: 10px;
+  padding: 12px 14px;
+  background: var(--panel-raised);
+  border: 1px solid var(--panel-edge);
+  border-left: 2px solid var(--panel-edge);
+  border-radius: 3px;
+}
+
+.card.active {
+  border-left-color: var(--accent-2);
+}
+
+.card.awaiting,
+details.card {
+  border-left-color: var(--accent);
+}
+
+.card-title {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+h3.card-title {
+  margin: 2px 0 8px;
+}
+
+details.card summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  cursor: pointer;
+  list-style: none;
+}
+
+details.card summary::-webkit-details-marker {
+  display: none;
+}
+
+details.card summary .card-title::before {
+  content: '▸ ';
+  color: var(--muted);
+}
+
+details.card[open] summary .card-title::before {
+  content: '▾ ';
+}
+
+.outcome {
+  border-top: 2px solid var(--accent-2);
+}
+
+.chosen {
+  margin: 4px 0;
+  font-style: italic;
+  color: var(--accent-2);
+}
+
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.effects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 10px;
+}
+
+.chip {
+  padding: 1px 8px;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+}
+
+.chip.positive {
+  color: var(--good);
+}
+
+.chip.negative {
+  color: var(--bad);
+}
+
+.countdown {
+  font-family: var(--mono);
+  color: var(--text);
+}
+
+/* --- Overview --- */
+
+.titles {
+  margin: 12px 0;
+}
+
+.title-row {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--panel-edge);
+}
+
+.title-row .stat-label {
+  display: block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.title-name {
+  color: var(--accent);
+}
+
+.title-detail {
+  margin: 2px 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 0.9rem;
+}
+
+.stat-label {
+  color: var(--muted);
+}
+
+.stat-value {
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.meter {
+  position: relative;
+  height: 4px;
+  margin: 2px 0 8px;
+  background: #1a2332;
+  overflow: hidden;
+}
+
+.meter-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  background: var(--accent-2);
+  transition: width 0.5s linear;
+}
+
+.meter-fill.negative {
+  background: var(--bad);
+}
+
+/* --- Forms --- */
+
+.field-label {
+  display: block;
+  margin: 18px 0 6px;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-2);
+}
+
+.text-input,
+.select-input {
+  width: 100%;
+  padding: 8px 10px;
+  font: inherit;
+  color: var(--text);
+  background: #0a0f17;
+  border: 1px solid var(--panel-edge);
+  border-radius: 3px;
+}
+
+.text-input:focus,
+.select-input:focus {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 1px;
+}
+
+/* --- Creation screen --- */
+
+.creation {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 28px;
+  border-top: 2px solid var(--accent);
+}
+
+.screen-title {
+  margin: 4px 0 8px;
+  font-size: 1.6rem;
+  color: var(--accent);
+}
+
+.government-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.government-card {
+  display: flex;
+  gap: 10px;
+  padding: 12px;
+  background: var(--panel-raised);
+  border: 1px solid var(--panel-edge);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.government-card:has(input:checked) {
+  border-color: var(--accent);
+}
+
+.government-card p {
+  margin: 4px 0;
+}
+
+.mini-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+.name-preview {
+  margin: 24px 0 0;
+  font-size: 1.2rem;
+  color: var(--accent-2);
+}
+
+/* --- Buttons --- */
+
+button {
+  font: inherit;
+  cursor: pointer;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--panel-edge);
+  border-radius: 3px;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 2px;
+}
+
+button.choice {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  width: 100%;
+  padding: 10px 14px;
+  text-align: left;
+  background: #0a0f17;
+}
+
+button.choice:hover {
+  border-color: var(--accent);
+  background: #161208;
+}
+
+button.choice.dismiss {
+  color: var(--muted);
+  border-style: dashed;
+}
+
+.choice-number {
+  font-family: var(--mono);
+  color: var(--accent);
+}
+
+button.primary {
+  margin-top: 20px;
+  padding: 10px 22px;
+  font-family: var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--bg);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+button.primary:hover:not(:disabled) {
+  background: #ffb95c;
+}
+
+button.secondary {
+  margin-top: 8px;
+  padding: 6px 14px;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+button.secondary:hover:not(:disabled) {
+  border-color: var(--accent-2);
+  color: var(--accent-2);
+}
+
+button.small {
+  padding: 4px 10px;
+}
+
+button.link-button {
+  display: block;
+  margin-top: 8px;
+  padding: 0;
+  border: none;
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-decoration: underline;
+}
+
+button.link-button:hover {
+  color: var(--bad);
+}
+
+/* --- Log --- */
+
+.log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.log li {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--panel-edge);
+  font-size: 0.85rem;
+}
+
+.log li:last-child {
+  border-bottom: none;
+}
+
+.log-kind {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.kind-operation {
+  color: var(--accent-2);
+}
+
+.kind-ambition {
+  color: var(--accent);
+}
+
+.log-choice {
+  color: var(--accent-2);
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+.log-result {
+  margin-top: 4px;
+  font-size: 0.9rem;
+}
+
+.log .effects {
+  margin-bottom: 0;
+}
+
+/* --- Galactic Map (placeholder) --- */
+
+/* The map tab fills the window: the page stops scrolling and the screen
+   stretches into whatever space the top bar and tabs leave. */
+body.map-mode {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+body.map-mode .topbar {
+  max-width: none;
+  width: 100%;
+}
+
+body.map-mode #screen {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  max-width: none;
+  padding-bottom: 0;
+}
+
+body.map-mode .tabs {
+  margin-bottom: 0;
+}
+
+.map-panel {
+  flex: 1;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+}
+
+.map-viewport {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 320px;
+}
+
+.starmap {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(ellipse at center, #0b1220 0%, #04060a 80%);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  outline: none;
+}
+
+.starmap:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: -2px;
+}
+
+.starmap.dragging {
+  cursor: grabbing;
+}
+
+.starmap .dust circle {
+  fill: #9fb3cf;
+  pointer-events: none;
+}
+
+/* Overlays on top of the map. They let drags through to the map, except
+   for the buttons. */
+.map-hud {
+  position: absolute;
+  pointer-events: none;
+}
+
+.map-header {
+  top: 12px;
+  left: 16px;
+  max-width: min(520px, calc(100% - 32px));
+  padding: 8px 12px;
+  background: rgba(6, 8, 13, 0.72);
+  border: 1px solid var(--panel-edge);
+  border-radius: 3px;
+}
+
+/* Sector › Constellation › System. The header lets clicks through to the
+   map, so the trail itself has to take them back. */
+.map-crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  pointer-events: auto;
+}
+
+.map-header button.map-crumb {
+  display: inline;
+  margin: 0;
+  font-size: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: var(--accent-2);
+  text-decoration: none;
+}
+
+.map-header button.map-crumb:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+.map-crumb.current {
+  color: var(--text);
+}
+
+.map-crumb-separator {
+  color: var(--muted);
+}
+
+.map-header p {
+  margin: 2px 0 0;
+  font-size: 0.85rem;
+}
+
+.map-buttons {
+  top: 12px;
+  right: 16px;
+  display: flex;
+  gap: 4px;
+  pointer-events: auto;
+}
+
+.map-buttons button.secondary {
+  margin-top: 0;
+  background: rgba(6, 8, 13, 0.72);
+}
+
+.map-footer {
+  left: 16px;
+  right: 16px;
+  bottom: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.map-footer > * {
+  padding: 8px 12px;
+  background: rgba(6, 8, 13, 0.72);
+}
+
+@media (max-width: 760px) {
+  .map-header {
+    top: 56px;
+  }
+
+  .map-note {
+    display: none;
+  }
+}
+
+/* Nation colours. power-0 is always the player, in the game's amber. */
+.power-0 {
+  --power: var(--accent);
+}
+
+.power-1 {
+  --power: #b583ff;
+}
+
+.power-2 {
+  --power: #e2605a;
+}
+
+.power-3 {
+  --power: #5fcf8a;
+}
+
+.power-4 {
+  --power: #4ec3d8;
+}
+
+.power-5 {
+  --power: #e87fc0;
+}
+
+.power-6 {
+  --power: #d8d36a;
+}
+
+.starmap .territory {
+  fill: var(--power);
+  fill-opacity: 0.14;
+}
+
+/* Twice the visible width: the outer half is clipped away (see galaxyMap.ts). */
+.starmap .border {
+  fill: none;
+  stroke: var(--power);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-opacity: 0.85;
+}
+
+/* --- Constellations, and focusing one --- */
+
+/* A constellation's name, centred among its stars. Kept faint so it sits in
+   the background; clicking it focuses the constellation. bounding-box makes
+   the whole box around the name clickable, not just the thin letters. */
+.starmap .constellation-name {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  fill: var(--accent-2);
+  fill-opacity: 0.35;
+  paint-order: stroke;
+  stroke: #04060a;
+  stroke-width: 3px;
+  cursor: pointer;
+  pointer-events: bounding-box;
+  transition: fill-opacity 0.15s;
+}
+
+.starmap .constellation-name:hover {
+  fill-opacity: 0.9;
+}
+
+/* The focused constellation's name, shown above the grey-out. */
+.starmap .constellation-name.selected {
+  font-size: 12px;
+  fill-opacity: 1;
+  pointer-events: none;
+}
+
+/* Greys out the whole map; what's in focus is drawn above it (the lit layer
+   in galaxyMap.ts). Clicks pass through, so something else can still be
+   picked. */
+.starmap .focus-shade {
+  fill: #161b23;
+  fill-opacity: 0;
+  pointer-events: none;
+  transition: fill-opacity 0.25s;
+}
+
+.starmap.focused .focus-shade {
+  fill-opacity: 0.78;
+}
+
+/* The focused system's star and planets in a row: the star first, drawn
+   2.4× (RACK.starScale in galaxyMap.ts) so it's always the biggest body,
+   with a soft glow in its own colour. Its name moves down to clear it. */
+.starmap .system.racked .star,
+.starmap .system.racked:hover .star {
+  transform: scale(2.4);
+  filter: drop-shadow(0 0 3px var(--star));
+}
+
+/* Companion stars get their own place in the rack, so the small ones
+   beside the primary step aside. */
+.starmap .system.racked .star.companion {
+  display: none;
+}
+
+.starmap .planet-rack .rack-star {
+  filter: drop-shadow(0 0 3px var(--star));
+}
+
+.starmap .system.racked .home-ring {
+  transform: scale(1.7);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.starmap .system.racked .system-label {
+  transform: translateY(8px);
+}
+
+/* The capital's ring grows with it, so its name drops a little further. */
+.starmap .system.home.racked .system-label {
+  transform: translateY(13px);
+}
+
+/* No frame: a soft dark blur behind the row keeps it readable over lanes. */
+.starmap .planet-rack-shadow {
+  fill: #04060a;
+  fill-opacity: 0.8;
+  filter: blur(6px);
+}
+
+.starmap .planet-rack-axis {
+  stroke-width: 1;
+}
+
+.starmap .planet-ring {
+  fill: none;
+  stroke-width: 1.2;
+  stroke-opacity: 0.7;
+}
+
+.starmap .planet,
+.starmap .moon {
+  cursor: default;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 0.15s;
+}
+
+.starmap .planet:hover {
+  transform: scale(1.4);
+}
+
+.starmap .moon:hover {
+  transform: scale(1.8);
+}
+
+/* Ties a planet to its column of moons. */
+.starmap .moon-tether {
+  stroke-width: 0.6;
+  stroke-opacity: 0.35;
+}
+
+/* A focused system and its connections keep their names showing. */
+.starmap .system.lit .system-label {
+  opacity: 1;
+}
+
+button.link-button.map-system-link {
+  display: inline;
+  margin: 0;
+  overflow: hidden;
+  font-size: inherit;
+  color: var(--text);
+  text-align: left;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+button.link-button.map-system-link:hover {
+  color: var(--accent-2);
+  text-decoration: underline;
+}
+
+.map-info .map-info-subhead {
+  margin: 8px 0 4px;
+}
+
+.map-info {
+  top: 56px;
+  right: 16px;
+  width: min(320px, calc(100% - 32px));
+  max-height: calc(100% - 150px);
+  overflow-y: auto;
+  padding: 12px 14px;
+  background: rgba(6, 8, 13, 0.88);
+  border: 1px solid var(--panel-edge);
+  border-top: 2px solid var(--accent-2);
+  border-radius: 3px;
+  pointer-events: auto;
+}
+
+.map-info-close {
+  float: right;
+}
+
+.map-info button.map-info-close {
+  margin-top: 0;
+}
+
+.map-info-section + .map-info-section {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--panel-edge);
+}
+
+.map-info .eyebrow {
+  margin: 0;
+}
+
+.map-info-title {
+  margin: 2px 0 2px;
+  font-size: 1.05rem;
+  color: var(--text);
+}
+
+.map-info .muted {
+  margin: 0 0 6px;
+  font-size: 0.82rem;
+}
+
+.map-info-systems {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+}
+
+.map-info-systems li {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.map-info-systems li > span:nth-child(2) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.map-info-systems .muted {
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.map-info-holdings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.78rem;
+}
+
+.map-info-holdings li {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.map-info .swatch {
+  flex-shrink: 0;
+}
+
+.map-info-neighbours {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* Nation names across their territory. Purely a label: hovers pass through to the stars. */
+.starmap .territory-name {
+  font-family: var(--sans);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  fill: var(--power);
+  fill-opacity: 0.55;
+  paint-order: stroke;
+  stroke: #04060a;
+  stroke-opacity: 0.6;
+  stroke-width: 3px;
+  pointer-events: none;
+  user-select: none;
+}
+
+.map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+}
+
+.map-legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--power);
+  background: color-mix(in srgb, var(--power) 25%, transparent);
+  border-radius: 2px;
+}
+
+.swatch.unclaimed {
+  border: 1px dashed var(--muted);
+  background: none;
+}
+
+.starmap .lane {
+  stroke: #2b3a52;
+  stroke-width: 1.2;
+}
+
+/* A focused system's lanes, drawn above the grey-out so its connections stand out. */
+.starmap .lit-lane {
+  stroke: #5a7396;
+  pointer-events: none;
+}
+
+.starmap .system {
+  cursor: default;
+  outline: none;
+}
+
+.starmap .hit {
+  fill: transparent;
+}
+
+/* Each star's colour comes from its spectral class (--star, set in
+   galaxyMap.ts). Scaling from the star's own centre makes it "swell" in
+   place on hover; the glow keeps its colour. */
+.starmap .star {
+  fill: var(--star, #cfdcee);
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 0.15s, filter 0.15s;
+}
+
+.starmap .system:hover .star,
+.starmap .system:focus-visible .star {
+  transform: scale(1.7);
+  filter: drop-shadow(0 0 3px var(--star));
+}
+
+/* Stellar remnants. These come after the hover and rack rules on purpose,
+   so their glows win at the same specificity. A black hole is a dark disc
+   ringed by its accretion disc (keep the colour in step with
+   ACCRETION_COLOUR in galaxyMap.ts); a neutron star is a tiny, fierce
+   blue-white point with a wide halo. */
+.starmap .system .star.black-hole,
+.starmap .planet-rack .star.black-hole {
+  stroke: #ffb36b;
+  stroke-width: 1.1;
+  filter: drop-shadow(0 0 2px #ffb36b);
+}
+
+.starmap .system .star.neutron,
+.starmap .planet-rack .star.neutron {
+  filter: drop-shadow(0 0 1px #ffffff) drop-shadow(0 0 3px #8fc8ff);
+}
+
+/* Names stay hidden until hovered, so hundreds of labels don't clutter the map. */
+.starmap .system-label {
+  font-family: var(--mono);
+  font-size: 12px;
+  fill: var(--text);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+  paint-order: stroke;
+  stroke: #04060a;
+  stroke-width: 3px;
+}
+
+.starmap .system:hover .system-label,
+.starmap .system:focus-visible .system-label {
+  opacity: 1;
+}
+
+/* The player's home system is always labelled. Its star keeps its own
+   colour; the dashed ring marks it as home. */
+.starmap .home .system-label {
+  opacity: 1;
+  fill: var(--accent);
+}
+
+.starmap .home-ring {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+
+.map-note {
+  max-width: 460px;
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  border-left: 2px solid var(--accent-2);
+}
+
+/* --- Dev panel --- */
+
+.dev-panel {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 10;
+  max-width: calc(100vw - 32px);
+  padding: 10px 12px;
+  background: #1a1408;
+  border: 1px dashed var(--accent);
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.dev-clock {
+  margin: 4px 0 8px;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+}
+
+.dev-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.dev-row .muted {
+  width: 44px;
+}
+
+.dev-button {
+  padding: 2px 8px;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+}
+
+.dev-button.selected,
+.dev-button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}

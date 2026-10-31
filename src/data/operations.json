@@ -1,0 +1,157 @@
+[
+  {
+    "id": "establish_colony",
+    "title": "Establish a Colony",
+    "summary": "Settle the garden world your survey teams found, and turn a blank spot on the map into a home for millions.",
+    "condition": { "requiresFlags": ["habitable_world_found"] },
+    "startEffects": { "economy": -3 },
+    "stages": [
+      {
+        "id": "landing_survey",
+        "title": "Landing Survey",
+        "description": "The advance team is on the surface. The coastal plains are fertile and easy to build on, but storms roll in off the ocean every few weeks. The highland caves are safe and dry, but carving a city out of rock is slow, expensive work.",
+        "durationHours": 4,
+        "choices": [
+          { "text": "Build on the coastal plains.", "next": "recruiting", "setFlags": ["colony_coastal"], "result": "Surveyors stake out the first streets on the beach. The storm season is a problem for later." },
+          { "text": "Dig into the highlands.", "next": "recruiting", "effects": { "economy": -2 }, "setFlags": ["colony_highland"], "result": "The boring machines go in. It will cost more, but no storm will ever touch this city." }
+        ]
+      },
+      {
+        "id": "recruiting",
+        "title": "Recruiting Settlers",
+        "description": "The site is ready. Now it needs people. The colonial office has two proposals: generous land grants to attract volunteers, or a relocation program that empties the overcrowded penal stations.",
+        "durationHours": 8,
+        "choices": [
+          { "text": "Offer land grants to volunteers.", "next": "first_winter", "effects": { "economy": -3, "cohesion": 2 }, "result": "Applications outnumber places ten to one. The first colony ships leave to cheering crowds." },
+          { "text": "Relocate convicts from the penal stations.", "next": "first_winter", "effects": { "liberties": -4, "economy": 1 }, "setFlags": ["penal_colony"], "result": "The prison ships leave quietly, at night. Rights groups protest. The new colonists have little say in the matter." }
+        ]
+      },
+      {
+        "id": "first_winter",
+        "title": "The First Winter",
+        "description": "The colony made it through landing, but its first winter is harsher than any model predicted. Crops have failed, and the reactor is running at half capacity. The colony governor asks whether help is coming.",
+        "durationHours": 12,
+        "choices": [
+          { "text": "Send emergency supplies, whatever it costs.", "effects": { "economy": -3, "population": 40, "cohesion": 3 }, "setFlags": ["colony_established"], "result": "Relief convoys arrive just in time. By spring the colony is thriving, and its people never forget who came for them." },
+          { "text": "Let the colony fend for itself. Hardship builds character.", "effects": { "population": 20, "cohesion": -2 }, "setFlags": ["colony_established", "frontier_spirit"], "result": "The colony survives, barely, and comes out of the winter tough, self-reliant, and a little resentful of the capital." }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "fleet_modernization",
+    "title": "Fleet Modernization Program",
+    "summary": "Bring the navy's aging hulls up to modern standards, or replace them entirely.",
+    "condition": { "minStats": { "military": 20 } },
+    "startEffects": { "economy": -2 },
+    "stages": [
+      {
+        "id": "assessment",
+        "title": "Fleet Assessment",
+        "description": "Naval engineers have inspected every ship in service. Their report is blunt: half the fleet is older than the officers commanding it. They see two options, a refit or a new construction program.",
+        "durationHours": 3,
+        "choices": [
+          { "text": "Refit the existing hulls.", "next": "refit", "result": "The dry docks fill with old warships, stripped to their frames." },
+          { "text": "Scrap them and build a new line.", "next": "new_construction", "effects": { "economy": -4 }, "result": "The breakers' yards are busy for weeks. Veteran crews watch their old ships cut apart with mixed feelings." }
+        ]
+      },
+      {
+        "id": "refit",
+        "title": "Refit Priorities",
+        "description": "The refit is half done, and the budget will stretch to one major upgrade across the fleet: heavier armour to survive a stand-up fight, or advanced sensors to make sure you see the fight coming.",
+        "durationHours": 10,
+        "choices": [
+          { "text": "Heavier armour.", "effects": { "military": 5 }, "result": "The refitted fleet is slower but nearly impossible to kill. Admirals approve." },
+          { "text": "Advanced sensors.", "effects": { "military": 3, "technology": 2 }, "result": "Your ships now see three systems further than anyone else's. The research spin-offs are already finding civilian uses." }
+        ]
+      },
+      {
+        "id": "new_construction",
+        "title": "The New Line",
+        "description": "The first hulls of the new line are taking shape in orbit. The shipyards ask one last question: commission the full order, or sell the old ships' salvage to arms dealers to recover some of the cost.",
+        "durationHours": 16,
+        "choices": [
+          { "text": "Commission the full order.", "effects": { "military": 10, "technology": 2 }, "setFlags": ["modern_fleet"], "result": "Twelve new warships enter service in a single ceremony. The fleet is the most advanced it has ever been." },
+          { "text": "Sell the old salvage to offset the cost.", "effects": { "military": 7, "economy": 3, "cohesion": -1 }, "setFlags": ["modern_fleet"], "result": "The new line launches on budget. Your old warships turn up a few months later, flying pirate colours." }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "spy_network",
+    "title": "Establish a Spy Network",
+    "summary": "Build an intelligence service capable of seeing what other nations would rather keep hidden.",
+    "condition": { "requiresFlags": ["intelligence_mandate"] },
+    "startEffects": { "economy": -2 },
+    "stages": [
+      {
+        "id": "recruitment",
+        "title": "Recruitment",
+        "description": "Every spy network starts with people. The diplomatic corps offers polished, loyal officers. The criminal underworld offers people who already know how to disappear.",
+        "durationHours": 6,
+        "choices": [
+          { "text": "Recruit from the diplomatic corps.", "next": "placement", "result": "Your first agents are educated, presentable, and entirely by the book. That may be a problem." },
+          { "text": "Recruit from criminal networks.", "next": "placement", "effects": { "liberties": -1 }, "setFlags": ["spies_criminal"], "result": "Several pending prosecutions are quietly dropped. Your new agents are very good at their jobs, and very bad at paperwork." }
+        ]
+      },
+      {
+        "id": "placement",
+        "title": "Placement",
+        "description": "The agents are trained. Now: where do they go? Foreign capitals hold military and technological secrets. But the director of the new service points out, carefully, that most threats to the government come from inside its own borders.",
+        "durationHours": 12,
+        "choices": [
+          { "text": "Plant agents abroad.", "next": "first_report", "effects": { "technology": 2 }, "setFlags": ["spy_network_foreign"], "result": "Your agents settle into embassies and trade missions across the galaxy. Stolen schematics start arriving within weeks." },
+          { "text": "Watch our own citizens.", "next": "first_report", "effects": { "cohesion": 3, "liberties": -5 }, "setFlags": ["domestic_surveillance"], "result": "The network turns inward. Dissent becomes very quiet, very quickly." }
+        ]
+      },
+      {
+        "id": "first_report",
+        "title": "The First Report",
+        "description": "The network's first major report is on your desk. It's good: actionable, specific, and dangerous. Acting on it would pay off now, but could expose your sources. Sitting on it would protect the network for the long game.",
+        "durationHours": 8,
+        "choices": [
+          { "text": "Act on the intelligence.", "effects": { "economy": 3, "military": 2 }, "setFlags": ["spy_network_established"], "result": "A rival's trade deal collapses mysteriously, and your negotiators step into the gap. Two of your agents have to be pulled out in a hurry." },
+          { "text": "Keep the network quiet and growing.", "effects": { "technology": 1 }, "setFlags": ["spy_network_established", "spy_network_patient"], "result": "You file the report and do nothing. The network keeps growing in the dark, and nobody suspects it exists." }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "reverse_engineer_vindicator",
+    "title": "Reverse-Engineer the Vindicator",
+    "summary": "Take the salvaged foreign warship apart, piece by piece, and learn how it was built.",
+    "condition": { "requiresFlags": ["salvaged_warship"], "forbidsFlags": ["salvage_returned"] },
+    "stages": [
+      {
+        "id": "teardown",
+        "title": "Teardown",
+        "description": "The engineers have catalogued every component of the salvaged cruiser. Two systems stand out: a reactor more efficient than anything your nation can build, and a weapons suite your military would kill for. There's only time and money to study one properly.",
+        "durationHours": 6,
+        "choices": [
+          { "text": "Study the reactor.", "next": "reactor", "result": "The reactor is lifted out and moved to a hardened lab on a moon nobody visits." },
+          { "text": "Study the weapons.", "next": "weapons", "result": "The weapons are moved to a test range far from any inhabited world, just in case." }
+        ]
+      },
+      {
+        "id": "reactor",
+        "title": "Reactor Breakthrough",
+        "description": "The engineers have cracked the reactor's design. It could transform the civilian power grid, or give your warships the endurance to outlast anyone.",
+        "durationHours": 10,
+        "choices": [
+          { "text": "Adapt it for civilian power grids.", "effects": { "economy": 5, "technology": 3 }, "result": "Cheap power floods the grid. Factories expand, and the price of everything starts to fall." },
+          { "text": "Adapt it for warships.", "effects": { "military": 4, "technology": 3 }, "result": "Your warships can now cross the nation without refuelling. Naval planners rewrite every war plan." }
+        ]
+      },
+      {
+        "id": "weapons",
+        "title": "Weapons Analysis",
+        "description": "The test range has confirmed what the weapons can do. Your shipyards can copy them, at enormous cost. Or the designs could be sold, quietly, to the arms dealers who have been asking around.",
+        "durationHours": 10,
+        "choices": [
+          { "text": "Build copies for our own fleet.", "effects": { "military": 7, "economy": -2 }, "setFlags": ["vindicator_weapons"], "result": "Your newest warships carry guns based on a foreign design that nobody admits to losing." },
+          { "text": "Sell the designs to arms dealers.", "effects": { "economy": 6, "cohesion": -2 }, "setFlags": ["sold_vindicator_designs"], "result": "The money is extraordinary. You try not to wonder where those weapons will be pointed next." }
+        ]
+      }
+    ]
+  }
+]
