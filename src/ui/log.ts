@@ -11,7 +11,7 @@ const KIND_LABELS: Record<LogEntry['kind'], string> = {
 /** The full decision log. It has a whole tab, so each entry shows its result and effects too. */
 export function logView(log: LogEntry[], now: number): HTMLElement {
   const panel = el('section', 'panel log-panel');
-  panel.append(el('h2', 'section-title', 'Decision Log'));
+  panel.append(el('h2', 'section-title', 'Logs'));
   if (log.length === 0) {
     panel.append(el('p', 'muted', 'No decisions on record yet.'));
     return panel;

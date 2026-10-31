@@ -126,7 +126,7 @@ body {
   border-radius: 9px;
 }
 
-/* --- Nation Overview tab: nation panel | dashboard --- */
+/* --- Overview tab: nation panel | dashboard --- */
 
 .overview-layout {
   display: grid;
@@ -664,11 +664,13 @@ button.link-button:hover {
 /* --- Galactic Map (placeholder) --- */
 
 /* In the game, the map fills the whole window and the page never scrolls.
-   The top bar is hidden: the nation's name and New Nation move into the
-   dock along the bottom (render.ts), and the other views open in a sheet
+   The page's top bar is hidden: the status bar across the top takes the
+   nation's name, stats, clock and New Nation, the dock down the left
+   edge holds the view buttons (render.ts), and the views open in a sheet
    over the map. */
 :root {
-  --dock-height: 52px;
+  --status-height: 36px;
+  --rail-width: 96px;
 }
 
 body.game-mode {
@@ -707,27 +709,27 @@ body.game-mode .dev-banner {
   border-radius: 0;
 }
 
-/* --- Dock: the rack of buttons along the bottom --- */
+/* --- Status bar: the nation's name and stats, across the top --- */
 
-.dock {
+.status-bar {
   position: absolute;
+  top: 0;
   left: 0;
   right: 0;
-  bottom: 0;
   z-index: 20;
-  /* Name | buttons, centered | New Nation. */
+  /* Name | stats, centered | clock and New Nation. */
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   gap: 16px;
-  height: var(--dock-height);
+  height: var(--status-height);
   padding: 0 16px;
   background: rgba(6, 8, 13, 0.88);
-  border-top: 1px solid var(--panel-edge);
+  border-bottom: 1px solid var(--panel-edge);
   backdrop-filter: blur(6px);
 }
 
-.dock-title {
+.status-name {
   min-width: 0;
   overflow: hidden;
   font-weight: 600;
@@ -736,25 +738,78 @@ body.game-mode .dev-banner {
   text-overflow: ellipsis;
 }
 
-.dock-buttons {
+.status-stats {
   display: flex;
-  gap: 4px;
+  align-items: center;
+  gap: 24px;
+  margin: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 
-/* An icon, then the button's name. */
+.status-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.status-stat-label {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.status-stat-value {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-2);
+}
+
+/* --- Dock: the column of view buttons down the left edge --- */
+
+.dock {
+  position: absolute;
+  top: var(--status-height);
+  left: 0;
+  bottom: 0;
+  z-index: 20;
+  width: var(--rail-width);
+  padding: 12px 8px;
+  overflow-y: auto;
+  background: rgba(6, 8, 13, 0.88);
+  border-right: 1px solid var(--panel-edge);
+  backdrop-filter: blur(6px);
+}
+
+.dock-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* An icon above the button's name. */
 .dock .dock-button {
   position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
-  height: 38px;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 64px;
   margin: 0;
-  padding: 0 14px 0 10px;
+  padding: 8px 4px;
   font-family: var(--mono);
-  font-size: 0.75rem;
+  font-size: 0.66rem;
+  line-height: 1.25;
   letter-spacing: 0.06em;
+  text-align: center;
   text-transform: uppercase;
-  white-space: nowrap;
   color: var(--muted);
   background: none;
   border: 1px solid var(--panel-edge);
@@ -764,8 +819,8 @@ body.game-mode .dev-banner {
 /* PLACEHOLDER icon: a dashed square, in the button's color, until real icons are drawn. */
 .dock-icon {
   flex: none;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border: 1.5px dashed currentColor;
   border-radius: 2px;
 }
@@ -773,8 +828,8 @@ body.game-mode .dev-banner {
 /* The planner's count of pending matters sits on the button's corner. */
 .dock .dock-button .badge {
   position: absolute;
-  top: -7px;
-  right: -7px;
+  top: -6px;
+  right: -6px;
 }
 
 .dock .dock-button:hover {
@@ -788,21 +843,355 @@ body.game-mode .dev-banner {
   border-color: var(--accent);
 }
 
-/* The clock and New Nation sit at the far right, balancing the name on the left. */
-.dock-right {
+/* The clock and New Nation sit at the status bar's far right. */
+.status-right {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 12px;
 }
 
-.dock .clock {
+.status-bar button.status-restart {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.status-bar .clock {
   font-family: var(--mono);
   font-size: 0.85rem;
   letter-spacing: 0.06em;
   font-variant-numeric: tabular-nums;
   color: var(--accent-2);
   white-space: nowrap;
+}
+
+/* --- Task tracker: management tasks in progress, down the right of the map --- */
+
+/* The right column: under the map's zoom buttons, with the
+   tracker at the top and the chat window at the bottom. The tracker scrolls
+   when they'd meet. Sheets and their backdrop cover the column. Drags in the
+   gap between the two go through to the map. */
+.map-right {
+  position: absolute;
+  top: calc(var(--status-height) + 56px);
+  right: 16px;
+  bottom: 12px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  /* Right-aligned, so the tracker and the wider chat window share the right edge. */
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.map-right > * {
+  pointer-events: auto;
+}
+
+.task-tracker {
+  flex: 0 1 auto;
+  min-height: 0;
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 12px;
+  background: rgba(6, 8, 13, 0.88);
+  border: 1px solid var(--panel-edge);
+  border-top: 2px solid var(--accent);
+  border-radius: 3px;
+}
+
+.task-tracker-title {
+  flex: none;
+  margin: 0 0 6px;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.task-list {
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.task-list li + li {
+  border-top: 1px solid var(--panel-edge);
+}
+
+/* Each task is a button that opens Management. */
+.task-tracker button.task {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin: 0;
+  padding: 8px 6px;
+  font: inherit;
+  text-align: left;
+  color: var(--text);
+  background: none;
+  border: none;
+  border-left: 2px solid transparent;
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.task-tracker button.task:hover,
+.task-tracker button.task:focus-visible {
+  background: var(--panel);
+  border-left-color: var(--accent-2);
+}
+
+/* Waiting on the player: marked in amber. */
+.task-tracker button.task.urgent {
+  border-left-color: var(--accent);
+}
+
+.task-kind {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-2);
+}
+
+.task-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.task-detail {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.task .meter {
+  margin: 4px 0 2px;
+}
+
+.task .awaiting-tag {
+  margin-top: 2px;
+}
+
+.task-tracker button.task-empty {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+/* --- Chat window (PLACEHOLDER mockup, see ui/chat.ts) --- */
+
+/* Twice the tracker's width, but never reaching the map's left column (340px + gutters) or the dock. */
+.chat-window {
+  flex: none;
+  width: min(600px, calc(100vw - var(--rail-width) - 404px));
+  display: flex;
+  flex-direction: column;
+  background: rgba(6, 8, 13, 0.88);
+  border: 1px solid var(--panel-edge);
+  border-top: 2px solid var(--accent-2);
+  border-radius: 3px;
+}
+
+.chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--panel-edge);
+}
+
+.chat-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chat-online-count {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  color: var(--good);
+}
+
+.chat-header button.chat-toggle {
+  margin: 0;
+  padding: 0 8px;
+  line-height: 1.4;
+}
+
+/* Minimized: only the header, as a bar. */
+.chat-window.minimized .chat-header {
+  border-bottom: none;
+}
+
+/* Messages and input on the left, who's online on the right. */
+.chat-body {
+  display: flex;
+}
+
+.chat-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-people {
+  flex: none;
+  width: 170px;
+  max-height: 224px;
+  padding: 8px 10px;
+  overflow-y: auto;
+  border-left: 1px solid var(--panel-edge);
+}
+
+.chat-people-title {
+  margin: 0 0 6px;
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.chat-people-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chat-person {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+  font-size: 0.8rem;
+}
+
+.chat-person-name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.chat-status-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--good);
+}
+
+.chat-person.away {
+  color: var(--muted);
+}
+
+.chat-person.away .chat-status-dot {
+  background: none;
+  border: 1.5px solid var(--accent);
+}
+
+.chat-tabs {
+  display: flex;
+  gap: 12px;
+}
+
+.chat-tab,
+.chat-soon {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.chat-tab.selected {
+  color: var(--accent-2);
+}
+
+.chat-soon {
+  padding: 1px 6px;
+  font-size: 0.62rem;
+  border: 1px dashed var(--muted);
+  border-radius: 2px;
+}
+
+.chat-messages {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 180px;
+  margin: 0;
+  padding: 8px 10px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.chat-message {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.chat-from {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.chat-message.own .chat-from {
+  color: var(--accent-2);
+}
+
+/* A game notification in the chat (a treaty, a new colony): set apart from players' messages. */
+.chat-notice {
+  padding: 3px 8px;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: var(--accent-2);
+  background: rgba(78, 195, 216, 0.07);
+  border-left: 2px solid var(--accent-2);
+}
+
+.chat-input {
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px;
+  border-top: 1px solid var(--panel-edge);
+}
+
+.chat-input input {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 0.82rem;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--panel-edge);
+  border-radius: 2px;
+}
+
+.chat-input button.secondary {
+  margin: 0;
+}
+
+/* On narrow screens the map's info panel takes the full width, so the right
+   column gives way; the Management button's badge still counts waiting tasks. */
+@media (max-width: 760px) {
+  .map-right {
+    display: none;
+  }
 }
 
 /* --- Sheet: a view opened from the dock, over the map --- */
@@ -828,15 +1217,16 @@ body.game-mode .dev-banner {
   }
 }
 
+/* Centered in the space right of the dock, hanging from the status bar. */
 .sheet {
   position: absolute;
-  left: 50%;
-  bottom: calc(var(--dock-height) + 12px);
+  top: calc(var(--status-height) + 12px);
+  left: calc(var(--rail-width) + (100% - var(--rail-width)) / 2);
   z-index: 15;
   display: flex;
   flex-direction: column;
-  width: min(1080px, calc(100% - 32px));
-  max-height: calc(100% - var(--dock-height) - 24px);
+  width: min(1080px, calc(100% - var(--rail-width) - 32px));
+  max-height: calc(100% - var(--status-height) - 24px);
   transform: translateX(-50%);
   background: rgba(8, 11, 18, 0.96);
   border: 1px solid var(--panel-edge);
@@ -889,18 +1279,34 @@ body.game-mode .dev-banner {
 
 /* On narrow screens the name gives way, and the buttons scroll sideways if they must. */
 @media (max-width: 760px) {
+  /* A slimmer dock, so the map keeps most of the width. */
+  :root {
+    --rail-width: 72px;
+  }
+
   .dock {
+    padding: 8px 4px;
+  }
+
+  .dock .dock-button {
+    min-height: 56px;
+    font-size: 0.58rem;
+    letter-spacing: 0.02em;
+  }
+
+  /* The name gives way, and the stats scroll sideways when they don't fit. */
+  .status-bar {
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 8px;
     padding: 0 8px;
   }
 
-  .dock-title {
+  .status-name {
     display: none;
   }
 
-  .dock-buttons {
-    overflow-x: auto;
+  .status-stats {
+    gap: 16px;
   }
 }
 
@@ -951,10 +1357,10 @@ body.game-mode .dev-banner {
 /* The left column: the trail at the top, the info panel under it, and the
    legend at the bottom. The info panel scrolls when they'd meet. */
 .map-left {
-  top: 12px;
-  left: 16px;
-  bottom: calc(var(--dock-height) + 12px);
-  width: min(340px, calc(100% - 32px));
+  top: calc(var(--status-height) + 12px);
+  left: calc(var(--rail-width) + 16px);
+  bottom: 12px;
+  width: min(340px, calc(100% - var(--rail-width) - 32px));
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1006,7 +1412,7 @@ body.game-mode .dev-banner {
 }
 
 .map-buttons {
-  top: 12px;
+  top: calc(var(--status-height) + 12px);
   right: 16px;
   display: flex;
   gap: 4px;
@@ -1021,7 +1427,7 @@ body.game-mode .dev-banner {
 /* The legend, pushed to the bottom of the left column. */
 @media (max-width: 760px) {
   .map-left {
-    top: 56px;
+    top: calc(var(--status-height) + 56px);
   }
 }
 
@@ -1176,6 +1582,16 @@ body.game-mode .dev-banner {
   stroke-width: 0.5;
   stroke-opacity: 0.35;
   pointer-events: none;
+}
+
+/* An asteroid belt in the miniature: a ring of dashes, hoverable for its name. */
+.starmap .preview-belt {
+  fill: none;
+  stroke-width: 1.3;
+  stroke-opacity: 0.75;
+  stroke-dasharray: 0.5 1.2;
+  stroke-linecap: round;
+  pointer-events: stroke;
 }
 
 /* In a wide system, the line joining its stars, dashed like their track in the diagram. */
@@ -1870,6 +2286,17 @@ button.link-button.map-system-link:hover {
   stroke-dasharray: 4 5;
 }
 
+/* The asteroid belt: only its invisible hit ring takes the pointer, not its rocks or name. */
+.system-map .diagram-belt {
+  pointer-events: none;
+}
+
+.system-map .diagram-belt-hit {
+  fill: none;
+  stroke: transparent;
+  pointer-events: stroke;
+}
+
 .system-map .diagram-moon-orbit {
   fill: none;
   stroke: #2b3a52;
@@ -2105,6 +2532,23 @@ button.context-menu-action:focus-visible {
   color: var(--text);
   background: rgba(78, 195, 216, 0.1);
   outline: none;
+}
+
+/* A heading over a group of actions, like "Diplomacy · Veyrani Compact". */
+.context-menu-group {
+  margin: 4px 0 0;
+  padding: 8px 14px 4px;
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-top: 1px solid var(--panel-edge);
+}
+
+.context-menu-group:first-child {
+  margin-top: 0;
+  border-top: none;
 }
 
 /* Hyperlanes out of the sector, towards its neighbors (exitLayer in galaxyMap.ts). */

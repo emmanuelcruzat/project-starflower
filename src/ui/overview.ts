@@ -9,7 +9,7 @@ export function overviewView(nation: Nation, content: GameContent, onChangePrefi
   const titles = nationTitles(nation, content);
 
   panel.append(
-    el('h2', 'section-title', 'Nation Overview'),
+    el('h2', 'section-title', 'Overview'),
     el('p', 'muted', government?.name ?? nation.governmentId),
   );
 

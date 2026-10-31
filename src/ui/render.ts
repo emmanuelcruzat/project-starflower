@@ -3,7 +3,7 @@ import type { NationSetup } from '../engine/nation';
 import { availableOperations, isAwaitingDecision } from '../engine/operations';
 import { fullName } from '../engine/titles';
 import type { GameContent, LogEntry, Nation } from '../types';
-import { byId, el, formatStat, liveClock } from './dom';
+import { byId, el, formatStat, liveClock, STAT_LABELS } from './dom';
 import { STAT_KEYS } from '../types';
 import { creationView } from './creation';
 import { attentionCount, dashboardView } from './dashboard';
@@ -12,6 +12,8 @@ import { diplomacyView, galaxyMapView } from './galaxyMap';
 import { logView } from './log';
 import { overviewView } from './overview';
 import { plannerView, type PlannerHandlers } from './planner';
+import { trackerView } from './tracker';
+import { chatMockup } from './chat';
 
 // Top-level rendering: picks the screen and assembles it from the view
 // modules. Each render rebuilds the screen from the nation, so the page can
@@ -19,15 +21,15 @@ import { plannerView, type PlannerHandlers } from './planner';
 
 /**
  * The galactic map always fills the window. Everything else opens from the
- * dock along the bottom, in a sheet over the map; null means none is open.
+ * dock down the left edge, in a sheet over the map; null means none is open.
  */
 export type Tab = 'overview' | 'planner' | 'diplomacy' | 'log';
 
 const TAB_LABELS: Record<Tab, string> = {
-  overview: 'Nation Overview',
+  overview: 'Overview',
   planner: 'Management',
   diplomacy: 'Diplomacy',
-  log: 'Decision Log',
+  log: 'Logs',
 };
 
 /** UI-only state. It belongs to this browser window, not to the nation, so it's never saved with it. */
@@ -55,10 +57,13 @@ export function renderCreation(content: GameContent, onCreate: (setup: NationSet
 export function renderGame(nation: Nation, content: GameContent, now: number, view: ViewState, handlers: GameHandlers): void {
   byId('nation-title').textContent = fullName(nation);
   byId('new-nation').hidden = false;
-  // The map fills the window, with the dock over its bottom edge (see .game-mode in style.css).
+  // The map fills the window, with the status bar over its top edge and the dock down its left (see .game-mode in style.css).
   document.body.classList.add('game-mode');
 
-  const parts: HTMLElement[] = [galaxyMapView(nation, handlers.onClaimSystem)];
+  const parts: HTMLElement[] = [
+    galaxyMapView(nation, handlers.onClaimSystem, () => handlers.onSelectTab('planner')),
+    rightColumn(trackerView(nation, content, now, () => handlers.onSelectTab('planner')), chatMockup()),
+  ];
   if (view.tab) {
     const close = () => handlers.onSelectTab(null);
     // A dimmed backdrop over the map: clicking it closes the panel.
@@ -66,8 +71,15 @@ export function renderGame(nation: Nation, content: GameContent, now: number, vi
     backdrop.addEventListener('click', close);
     parts.push(backdrop, sheet(view.tab, sheetBody(view.tab, nation, content, now, view, handlers), close));
   }
-  parts.push(dock(fullName(nation), view.tab, attentionCount(nation, now), now, handlers.onSelectTab));
+  parts.push(statusBar(nation, now), dock(view.tab, attentionCount(nation, now), handlers.onSelectTab));
   byId('screen').replaceChildren(...parts);
+}
+
+/** Down the right of the map: the task tracker at the top, the chat window at the bottom. */
+function rightColumn(tracker: HTMLElement, chat: HTMLElement): HTMLElement {
+  const column = el('div', 'map-right');
+  column.append(tracker, chat);
+  return column;
 }
 
 function sheetBody(tab: Tab, nation: Nation, content: GameContent, now: number, view: ViewState, handlers: GameHandlers): HTMLElement {
@@ -102,11 +114,8 @@ function sheet(tab: Tab, body: HTMLElement, onClose: () => void): HTMLElement {
   return node;
 }
 
-/**
- * The rack of buttons along the bottom: the nation's name, a button for
- * each view (pressing the open one again closes it), and the clock and New Nation.
- */
-function dock(title: string, selected: Tab | null, attention: number, now: number, onSelect: (tab: Tab | null) => void): HTMLElement {
+/** The dock down the left edge: a button for each view. Pressing the open one again closes it. */
+function dock(selected: Tab | null, attention: number, onSelect: (tab: Tab | null) => void): HTMLElement {
   const bar = el('nav', 'dock');
   bar.setAttribute('aria-label', 'Game views');
   const buttons = el('div', 'dock-buttons');
@@ -118,13 +127,40 @@ function dock(title: string, selected: Tab | null, attention: number, now: numbe
     b.addEventListener('click', () => onSelect(tab === selected ? null : tab));
     buttons.append(b);
   }
-  // The real New Nation button lives in the (hidden) top bar, where main.ts listens to it.
-  const restart = iconButton('dock-button dock-restart', 'New Nation');
-  restart.addEventListener('click', () => byId('new-nation').click());
-  const right = el('div', 'dock-right');
-  right.append(liveClock(now), restart);
-  bar.append(el('span', 'dock-title', title), buttons, right);
+  bar.append(buttons);
   return bar;
+}
+
+/**
+ * The bar across the top: the nation's name, its stats, and the clock and
+ * New Nation. viewKey covers the name and stats, so the bar redraws when
+ * they change; the clock ticks on its own (updateLiveTimers).
+ */
+function statusBar(nation: Nation, now: number): HTMLElement {
+  const bar = el('header', 'status-bar');
+  const list = el('dl', 'status-stats');
+  list.setAttribute('aria-label', 'Nation stats');
+  for (const key of STAT_KEYS) {
+    const value = nation.stats[key];
+    const item = el('div', 'status-stat');
+    // The full figure in the tooltip, since population is shortened here.
+    item.title = `${STAT_LABELS[key]}: ${formatStat(key, value)}`;
+    const short = key === 'population' ? shortPopulation(value) : formatStat(key, value);
+    item.append(el('dt', 'status-stat-label', STAT_LABELS[key]), el('dd', 'status-stat-value', short));
+    list.append(item);
+  }
+  // The real New Nation button lives in the page's (hidden) top bar, where main.ts listens to it.
+  const restart = el('button', 'secondary small status-restart', 'New Nation');
+  restart.addEventListener('click', () => byId('new-nation').click());
+  const right = el('div', 'status-right');
+  right.append(liveClock(now), restart);
+  bar.append(el('span', 'status-name', fullName(nation)), list, right);
+  return bar;
+}
+
+/** Population (in millions) shortened for the status bar: "850M", "1.23B". */
+function shortPopulation(millions: number): string {
+  return millions >= 1000 ? `${(millions / 1000).toFixed(2)}B` : `${Math.round(millions)}M`;
 }
 
 /** A dock button: an icon (PLACEHOLDER: blank until real icons are drawn), then its name. */

@@ -14,9 +14,22 @@ export interface MenuContent {
   /** Label and value pairs, shown as a compact table. */
   facts?: [label: string, value: string][];
   description?: string;
-  actions?: { label: string; run: () => void }[];
+  actions?: MenuAction[];
   /** A color dot beside the title: the body's own color. */
   colour?: string;
+}
+
+export interface MenuAction {
+  label: string;
+  run?: () => void;
+  /** A small heading over this action and the ones after it that share it, like "Diplomacy". */
+  group?: string;
+  /**
+   * PLACEHOLDER: for an action that doesn't work yet. Choosing it opens a
+   * note in the menu's place saying so, with this as its text, instead of
+   * running anything.
+   */
+  soon?: string;
 }
 
 let open: { node: HTMLElement; close: () => void } | null = null;
@@ -59,12 +72,16 @@ export function showContextMenu(x: number, y: number, content: MenuContent): voi
   const buttons: HTMLButtonElement[] = [];
   if (content.actions?.length) {
     const list = el('div', 'context-menu-actions');
+    let group: string | undefined;
     for (const action of content.actions) {
-      const button = el('button', 'context-menu-action', action.label) as HTMLButtonElement;
+      if (action.group && action.group !== group) list.append(el('p', 'context-menu-group', action.group));
+      group = action.group;
+      const button = el('button', `context-menu-action ${action.soon ? 'soon' : ''}`, action.label) as HTMLButtonElement;
       button.setAttribute('role', 'menuitem');
       button.addEventListener('click', () => {
         close();
-        action.run();
+        if (action.soon) showContextMenu(x, y, { eyebrow: 'Coming soon', title: action.label, description: action.soon });
+        else action.run?.();
       });
       buttons.push(button);
       list.append(button);

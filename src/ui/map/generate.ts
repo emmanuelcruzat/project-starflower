@@ -358,13 +358,33 @@ export const STAR_TYPES: StarType[] = [
     name: 'Red giant', short: 'RG', weight: 4, radius: 6, colour: '#ff8a5c', eyebrow: 'Giant star', temperature: '3,000–5,000 K',
     description: 'An old star swollen to a hundred times its former size as its core runs dry. Its inner worlds have long since been swallowed or scorched.',
   },
+  // Supergiants and hypergiants come in blue, yellow and red. Each family
+  // is rare as a whole: about 1 star in 400 is a supergiant and 1 in 1,700
+  // a hypergiant, so a sector (some 590 stars) averages one or two
+  // supergiants, and only about one sector in three has a hypergiant.
   {
-    name: 'Supergiant', short: 'SG', weight: 0.6, radius: 7.2, colour: '#ff6f45', eyebrow: 'Giant star', temperature: '3,500–4,500 K',
+    name: 'Blue supergiant', short: 'BSG', weight: 0.1, radius: 6.8, colour: '#a9c1ff', eyebrow: 'Giant star', temperature: '10,000–50,000 K',
+    description: 'A young, massive star burning so hot and fast it will be gone in a few million years. Its light floods the surrounding systems.',
+  },
+  {
+    name: 'Yellow supergiant', short: 'YSG', weight: 0.08, radius: 7, colour: '#ffe08a', eyebrow: 'Giant star', temperature: '4,000–7,500 K',
+    description: 'A giant caught mid-change, crossing from blue to red as it ages. Its brightness rises and falls in a slow, steady pulse.',
+  },
+  {
+    name: 'Red supergiant', short: 'RSG', weight: 0.12, radius: 7.4, colour: '#ff6f45', eyebrow: 'Giant star', temperature: '3,500–4,500 K',
     description: 'A vast, bloated star that would fill the orbit of a gas giant, shedding its outer layers into space. It will end as a supernova.',
   },
   {
-    name: 'Hypergiant', short: 'HG', weight: 0.15, radius: 8.6, colour: '#fff0c8', eyebrow: 'Giant star', temperature: '4,000–35,000 K',
-    description: 'Among the largest and brightest stars there are, a million times the Sun\'s light, so unstable it throws off whole shells of itself in great eruptions.',
+    name: 'Blue hypergiant', short: 'BHG', weight: 0.025, radius: 8.2, colour: '#c8d8ff', eyebrow: 'Giant star', temperature: '10,000–35,000 K',
+    description: 'A star near the limit of how massive one can be, shining with millions of suns. Its own light blows a fierce wind off its surface.',
+  },
+  {
+    name: 'Yellow hypergiant', short: 'YHG', weight: 0.02, radius: 8.4, colour: '#fff0c8', eyebrow: 'Giant star', temperature: '4,000–8,000 K',
+    description: "Among the largest and brightest stars there are, a million times the Sun's light, so unstable it throws off whole shells of itself in great eruptions.",
+  },
+  {
+    name: 'Red hypergiant', short: 'RHG', weight: 0.025, radius: 8.6, colour: '#ff5a3c', eyebrow: 'Giant star', temperature: '3,500–4,000 K',
+    description: 'The largest stars known, wide enough to swallow a whole planetary system, wrapped in dust and gas from their own collapsing outer layers.',
   },
   {
     name: 'Class O', short: 'O', weight: 2, radius: 5.5, colour: '#9db4ff', temperature: 'Over 30,000 K',
@@ -547,6 +567,56 @@ export function systemPlanets(nation: Nation, system: number, starCount: number)
     const host = wide ? weighted(hostWeights, hostRandom).k : null;
     return { type, moons: Array.from({ length: moons }, () => weighted(MOON_TYPES, moonRandom)), host };
   });
+}
+
+// --- Asteroid belts ---
+
+/** An asteroid belt: a ring of rubble on an orbit of its own among a star's planets. */
+export interface Belt {
+  /** The star it circles, as an index into its system's stars, or null for all of them (as for planets). */
+  host: number | null;
+  /**
+   * Where its orbit falls among its host's planets, counting outwards: 1 is
+   * between the first and second planet, and so on, up to the number of
+   * planets, which puts it beyond the last. Never 0: the innermost orbit
+   * always goes to a planet.
+   */
+  slot: number;
+}
+
+/** How likely a system is to have an asteroid belt. A system has at most one. */
+const BELT_CHANCE = 0.5;
+
+export const BELT_TYPE = {
+  name: 'Asteroid belt',
+  colour: '#9c8f7e',
+  description: "A wide ring of rock and metal left over from the birth of the system, too scattered to ever form a planet. A miner's fortune, and a hazard to navigation.",
+};
+
+/**
+ * A system's asteroid belt, or null if it has none. It has its own random
+ * stream, so adding belts didn't change any planets, and it circles one of
+ * the stars that already has planets.
+ */
+export function systemBelt(nation: Nation, system: number, planets: Planet[]): Belt | null {
+  const random = seededRandom(`${nation.id}/belts/${system}`);
+  if (planets.length === 0 || random() >= BELT_CHANCE) return null;
+  const hosts = [...new Set(planets.map((p) => p.host))];
+  const host = hosts[Math.floor(random() * hosts.length)];
+  const own = planets.filter((p) => p.host === host).length;
+  return { host, slot: 1 + Math.floor(random() * own) };
+}
+
+/** The orbits round one star (or, for null, round all of them), innermost first: planet indexes, with 'belt' where the belt's orbit falls. */
+export function hostOrbits(planets: Planet[], belt: Belt | null, host: number | null): (number | 'belt')[] {
+  const orbits: (number | 'belt')[] = planets.flatMap((p, i) => (p.host === host ? [i] : []));
+  if (belt && belt.host === host) orbits.splice(belt.slot, 0, 'belt');
+  return orbits;
+}
+
+/** "Kessra Belt", or in a wide system, after its star: "Kessra B Belt". */
+export function beltName(system: StarSystem, belt: Belt): string {
+  return belt.host === null ? `${system.name} Belt` : `${system.name} ${starLetter(belt.host)} Belt`;
 }
 
 // --- Proper names ---
