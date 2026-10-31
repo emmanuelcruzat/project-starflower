@@ -937,6 +937,11 @@ body.map-mode .tabs {
   filter: drop-shadow(0 0 3px var(--star));
 }
 
+/* A focused constellation's stars get the same glow, at their usual size. */
+.starmap .system.glowing .star {
+  filter: drop-shadow(0 0 3px var(--star));
+}
+
 .starmap .system.previewed .star.companion {
   display: none;
 }
@@ -1256,6 +1261,12 @@ button.link-button.map-system-link:hover {
 .starmap .system .star.neutron,
 .starmap .system-preview .star.neutron {
   filter: drop-shadow(0 0 1px #ffffff) drop-shadow(0 0 3px #8fc8ff);
+}
+
+/* A white dwarf is a hard, bright white point with only a tight halo. */
+.starmap .system .star.white-dwarf,
+.starmap .system-preview .star.white-dwarf {
+  filter: drop-shadow(0 0 0.6px #ffffff) drop-shadow(0 0 1.5px #dce8ff);
 }
 
 /* Names stay hidden until hovered, so hundreds of labels don't clutter the map. */
@@ -1638,6 +1649,15 @@ button.link-button.map-system-link:hover {
 
 .system-map .star.neutron {
   filter: drop-shadow(0 0 3px #ffffff) drop-shadow(0 0 12px #8fc8ff);
+}
+
+.system-map .star.white-dwarf {
+  filter: drop-shadow(0 0 1.5px #ffffff) drop-shadow(0 0 4px #dce8ff);
+}
+
+/* Its wide halo shrinks to a faint blush. */
+.system-map .diagram-halo.white-dwarf {
+  opacity: 0.5;
 }
 
 .system-map .diagram-planet-body {

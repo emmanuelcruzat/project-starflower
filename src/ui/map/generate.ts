@@ -288,16 +288,33 @@ export interface StarType {
    */
   radius: number;
   colour: string;
-  /** Neutron stars and black holes get their own look (see style.css). */
-  exotic?: 'neutron' | 'black-hole';
+  /** Dwarfs and remnants that get their own look (see style.css). */
+  exotic?: 'white-dwarf' | 'neutron' | 'black-hole';
+  /** What the right-click info calls it, if not just "Star". */
+  eyebrow?: string;
   /** Surface temperature, for the right-click info. */
   temperature: string;
   /** A sentence or two for the right-click info. */
   description: string;
 }
 
-/** The spectral classes O to M, hottest to coolest, then the stellar remnants. */
+/**
+ * The giants, biggest and rarest last; the spectral classes O to M, hottest
+ * to coolest; brown dwarfs; then the stellar remnants.
+ */
 export const STAR_TYPES: StarType[] = [
+  {
+    name: 'Red giant', short: 'RG', weight: 4, radius: 6, colour: '#ff8a5c', eyebrow: 'Giant star', temperature: '3,000–5,000 K',
+    description: 'An old star swollen to a hundred times its former size as its core runs dry. Its inner worlds have long since been swallowed or scorched.',
+  },
+  {
+    name: 'Supergiant', short: 'SG', weight: 0.6, radius: 7.2, colour: '#ff6f45', eyebrow: 'Giant star', temperature: '3,500–4,500 K',
+    description: 'A vast, bloated star that would fill the orbit of a gas giant, shedding its outer layers into space. It will end as a supernova.',
+  },
+  {
+    name: 'Hypergiant', short: 'HG', weight: 0.15, radius: 8.6, colour: '#fff0c8', eyebrow: 'Giant star', temperature: '4,000–35,000 K',
+    description: 'Among the largest and brightest stars there are, a million times the Sun\'s light, so unstable it throws off whole shells of itself in great eruptions.',
+  },
   {
     name: 'Class O', short: 'O', weight: 2, radius: 5.5, colour: '#9db4ff', temperature: 'Over 30,000 K',
     description: 'A blue giant: rare, blindingly bright and short-lived. Its radiation scours any world that strays close.',
@@ -326,13 +343,22 @@ export const STAR_TYPES: StarType[] = [
     name: 'Class M', short: 'M', weight: 30, radius: 3.2, colour: '#ff9b6b', temperature: '2,400–3,700 K',
     description: 'A red dwarf, the most common star in the galaxy. Dim and nearly ageless, but given to violent flares.',
   },
-  // A neutron star is tiny in reality; it's drawn at the smallest star size so it still beats any planet.
+  // Brown dwarfs, white dwarfs and neutron stars are smaller in reality than
+  // the smallest stars; they're drawn at that size so they still beat any planet.
   {
-    name: 'Neutron star', short: 'NS', weight: 2, radius: 3.2, colour: '#eaf4ff', exotic: 'neutron', temperature: 'About 600,000 K',
+    name: 'Brown dwarf', short: 'BD', weight: 8, radius: 3.2, colour: '#b4566b', eyebrow: 'Substellar object', temperature: '300–2,400 K',
+    description: 'Too small to fuse hydrogen, too big to be a planet: a failed star glowing a dull magenta with the heat left over from its birth.',
+  },
+  {
+    name: 'White dwarf', short: 'WD', weight: 6, radius: 3.2, colour: '#f2f6ff', exotic: 'white-dwarf', eyebrow: 'Stellar remnant', temperature: '8,000–40,000 K',
+    description: 'The bare core of a star like the Sun, packed into a ball the size of a planet. It has no fuel left and will cool for billions of years.',
+  },
+  {
+    name: 'Neutron star', short: 'NS', weight: 2, radius: 3.2, colour: '#eaf4ff', exotic: 'neutron', eyebrow: 'Stellar remnant', temperature: 'About 600,000 K',
     description: 'The collapsed core of a dead giant: a city-sized ball of neutrons, spinning many times a second.',
   },
   {
-    name: 'Black hole', short: 'BH', weight: 1, radius: 4.2, colour: '#05060a', exotic: 'black-hole', temperature: 'None it gives off',
+    name: 'Black hole', short: 'BH', weight: 1, radius: 4.2, colour: '#05060a', exotic: 'black-hole', eyebrow: 'Stellar remnant', temperature: 'None it gives off',
     description: 'Collapsed so far that not even light escapes. Matter spiraling in glows white-hot in its accretion disc.',
   },
 ];

@@ -45,6 +45,12 @@ const DOUBLE_TAP_MS = 400;
  */
 const ZOOM_PAST = 1.3;
 const OVERSCROLL_RESET_MS = 500;
+/**
+ * The region and galaxy views are hidden for now: the sector is the outermost
+ * level, with no buttons, trail links or zooming out to them. Their code is
+ * kept; set this to true to bring them back.
+ */
+const SHOW_OUTER_VIEWS = false;
 /** The region view's closest zoom, and how close it starts when you zoom out of the sector into it. */
 const REGION_ZOOM = { max: 2.4, arrive: 1.4 };
 /** The same for the galaxy view. */
@@ -219,6 +225,8 @@ export function galaxyMapView(nation: Nation, onClaim: (system: number, name: st
       // Systems lit only for being next door (a system's neighbors, or where a
       // constellation's gateways lead) get quieter names than the focus itself.
       node.classList.toggle('neighbour', isLit && (next?.kind === 'system' ? n !== next.index : !members.has(n)));
+      // A focused constellation's own stars glow like a focused system's star.
+      node.classList.toggle('glowing', next?.kind === 'constellation' && members.has(n));
       node.classList.remove('previewed');
       node.querySelector<SVGTextElement>('.system-label')?.style.removeProperty('transform');
       if (isLit) litLayer.append(node);
@@ -410,7 +418,7 @@ export function galaxyMapView(nation: Nation, onClaim: (system: number, name: st
   const summary = el('p', 'muted');
   const summaries: Record<View, string> = {
     system: 'Orbits are drawn to show order, not scale. Hover a body for its name; zoom out or press Escape to return to the sector.',
-    sector: `${map.systems.length} known star systems in ${map.constellations.length} constellations, joined by ${map.lanes.length} hyperlanes. Drag to move, scroll to zoom, click a constellation or a star to learn more, double-click a star to open its system. Zoom out to see the region.`,
+    sector: `${map.systems.length} known star systems in ${map.constellations.length} constellations, joined by ${map.lanes.length} hyperlanes. Drag to move, scroll to zoom, click a constellation or a star to learn more, double-click a star to open its system.${SHOW_OUTER_VIEWS ? ' Zoom out to see the region.' : ''}`,
     region: `${region.sectors.length} sectors in the ${region.name} Region. Only ${map.sector.name} has been charted: click it, or zoom in on it, to open its star map. Zoom out to see the galaxy.`,
     galaxy: `${galaxy.regions.length} regions around the core of the ${galaxy.name} Galaxy. Only ${region.name} has been surveyed: click it, or zoom in on it, to see its sectors.`,
   };
@@ -434,6 +442,11 @@ export function galaxyMapView(nation: Nation, onClaim: (system: number, name: st
   const showView = (next: View, how: 'zoom' | 'jump' | 'none') => {
     // A system's diagram needs a system; without one, show the sector.
     if (next === 'system' && !openSystems.has(nation.id)) next = 'sector';
+    // With the outer views hidden, stepping or zooming out of the sector does nothing.
+    if (!SHOW_OUTER_VIEWS && (next === 'region' || next === 'galaxy')) {
+      if (how !== 'none') return;
+      next = 'sector';
+    }
     const previous = views.get(nation.id) ?? 'sector';
     views.set(nation.id, next);
     viewport.dataset.view = next;
@@ -569,8 +582,10 @@ export function galaxyMapView(nation: Nation, onClaim: (system: number, name: st
     controls.lookAt(home.x, home.y, 1);
   });
   button('Sector', `Show the whole ${map.sector.name} Sector`, () => goTo('sector'));
-  button('Region', `Show the ${region.name} Region`, () => goTo('region'));
-  button('Galaxy', `Show the whole ${galaxy.name} Galaxy`, () => goTo('galaxy'));
+  if (SHOW_OUTER_VIEWS) {
+    button('Region', `Show the ${region.name} Region`, () => goTo('region'));
+    button('Galaxy', `Show the whole ${galaxy.name} Galaxy`, () => goTo('galaxy'));
+  }
 
   const footer = el('div', 'map-hud map-footer');
   footer.append(
@@ -602,8 +617,10 @@ function breadcrumbs(
   showLevel: (view: 'region' | 'galaxy') => void,
 ): HTMLElement[] {
   const steps: { label: string; target: Focus | 'region' | 'galaxy' }[] = [
-    { label: `${galaxy.name} Galaxy`, target: 'galaxy' },
-    { label: `${region.name} Region`, target: 'region' },
+    ...(SHOW_OUTER_VIEWS ? [
+      { label: `${galaxy.name} Galaxy`, target: 'galaxy' as const },
+      { label: `${region.name} Region`, target: 'region' as const },
+    ] : []),
     { label: `${map.sector.name} Sector`, target: null },
   ];
   if (constellation !== null) steps.push({ label: map.constellations[constellation].name, target: { kind: 'constellation', index: constellation } });
@@ -1678,7 +1695,7 @@ function systemDiagram(
       svg('stop', { offset: 1, 'stop-color': star.colour, 'stop-opacity': 0 }),
     );
     defs.append(halo);
-    back.append(svg('circle', { cx: x.toFixed(1), cy: y.toFixed(1), r: (r * 3.2).toFixed(1), fill: `url(#${haloId})`, class: 'diagram-halo' }));
+    back.append(svg('circle', { cx: x.toFixed(1), cy: y.toFixed(1), r: (r * 3.2).toFixed(1), fill: `url(#${haloId})`, class: ['diagram-halo', star.exotic ?? ''].join(' ').trim() }));
     const node = starCircle(star, x, y, r, 'diagram-star');
     node.setAttribute('data-star', String(k));
     const title = svg('title', {});
@@ -1929,7 +1946,7 @@ function starInfo(map: GalaxyMap, index: number, k: number): MenuContent {
   const facts: [string, string][] = [['Type', star.name], ['Temperature', star.temperature]];
   if (system.stars.length > 1) facts.push(['Role', k === 0 ? 'Primary' : `Companion to ${system.name} A`]);
   return {
-    eyebrow: star.exotic ? 'Stellar remnant' : 'Star',
+    eyebrow: star.eyebrow ?? 'Star',
     title: system.stars.length > 1 ? `${system.name} ${starLetter(k)}` : system.name,
     subtitle: star.name,
     facts,
