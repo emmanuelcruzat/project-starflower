@@ -36,7 +36,8 @@ function start(content: GameContent): void {
 
   let nation: Nation | null = loadNation();
   // UI-only state: which tab is open, and whether the latest decision's result is showing.
-  let tab: Tab = 'overview';
+  // The map is always showing; this is the view open over it, if any.
+  let tab: Tab | null = null;
   let showOutcome = false;
   let lastViewKey = '';
 

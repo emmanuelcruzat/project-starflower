@@ -114,8 +114,30 @@ function progressPercent(from: number, to: number, now: number): number {
   return Math.min(100, Math.max(0, ((now - from) / (to - from)) * 100));
 }
 
-/** Refreshes every countdown and progress bar on the page in place. */
+/** "14:05:09", in the player's own time format. */
+function formatClock(now: number): string {
+  return new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+/** "Saturday, October 31, 2026", for the clock's tooltip. */
+function formatDate(now: number): string {
+  return new Date(now).toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+/** The game clock's time, kept ticking by updateLiveTimers like the countdowns. */
+export function liveClock(now: number): HTMLElement {
+  const time = el('time', 'clock', formatClock(now));
+  time.dataset.clock = '';
+  time.title = formatDate(now);
+  return time;
+}
+
+/** Refreshes every countdown, progress bar and clock on the page in place. */
 export function updateLiveTimers(now: number): void {
+  document.querySelectorAll<HTMLElement>('[data-clock]').forEach((node) => {
+    node.textContent = formatClock(now);
+    node.title = formatDate(now);
+  });
   document.querySelectorAll<HTMLElement>('[data-ends-at]').forEach((node) => {
     const endsAt = Number(node.dataset.endsAt);
     node.textContent = endsAt > now ? formatDuration(endsAt - now) : (node.dataset.doneText ?? 'ready');

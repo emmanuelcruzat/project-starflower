@@ -2,51 +2,17 @@ import { fullName, nationTitles } from '../engine/titles';
 import type { GameContent, Nation } from '../types';
 import { el, formatPopulation } from './dom';
 import {
-  describeStars, generateMap, planetNames, systemPlanets, type GalaxyMap, type Planet,
+  describeStars, generateMap, planetNames, systemPlanets, type Planet,
 } from './map/generate';
 import { generateRegion } from './map/region';
 
 // An encyclopedia-style article about the nation, for the overview: an
-// infobox, a few paragraphs written from its stats and situation, its
-// capital system and its colonized worlds. Everything is worked out from
-// the nation as it is now, so the article keeps up as the nation changes.
-//
-// PLACEHOLDER: colonization isn't a game mechanic yet. Until it is, a world
-// counts as colonized if it's habitable (see HABITABLE) and in one of the
-// nation's systems on the galactic map.
+// infobox, a few paragraphs written from its stats and situation, and its
+// capital system. Everything is worked out from the nation as it is now, so
+// the article keeps up as the nation changes.
 
 /** Planet types people can live on, most comfortable first. The capital is the best of them in the home system. */
 const HABITABLE = ['Terran', 'Ocean', 'Jungle', 'Desert', 'Ice'];
-/** How many recent events the History section lists. */
-const RECENT_EVENTS = 4;
-
-interface World {
-  name: string;
-  type: string;
-  system: string;
-  /** The system's index on the map, for keeping each system's worlds together. */
-  systemIndex: number;
-  moons: number;
-  capital: boolean;
-}
-
-/** The nation's colonized worlds, capital first. A home system with nowhere habitable still has its capital, on its first planet. */
-function colonizedWorlds(nation: Nation, map: GalaxyMap): World[] {
-  const worlds: World[] = [];
-  map.systems.forEach((system, index) => {
-    if (map.owners[index] !== 0) return;
-    const planets = systemPlanets(nation, index, system.stars.length);
-    const names = planetNames(system, planets);
-    const isHome = index === map.home;
-    const capital = isHome ? capitalPlanet(planets) : -1;
-    planets.forEach((planet, k) => {
-      if (k !== capital && !HABITABLE.includes(planet.type.name)) return;
-      worlds.push({ name: names[k], type: planet.type.name, system: system.name, systemIndex: index, moons: planet.moons.length, capital: k === capital });
-    });
-  });
-  // The capital first, then system by system, each system's worlds by name ("Renyn A I" before "Renyn B I").
-  return worlds.sort((a, b) => Number(b.capital) - Number(a.capital) || a.systemIndex - b.systemIndex || a.name.localeCompare(b.name));
-}
 
 /** The home system's most habitable planet, or its first if none are. */
 function capitalPlanet(planets: Planet[]): number {
@@ -91,7 +57,6 @@ export function nationArticle(nation: Nation, content: GameContent): HTMLElement
   const homeNames = planetNames(home, homePlanets);
   const capital = capitalPlanet(homePlanets);
   const capitalName = homeNames[capital] ?? home.name;
-  const worlds = colonizedWorlds(nation, map);
   const territory = map.owners.filter((o) => o === 0).length;
   const neighbors = map.powers.filter((p) => !p.isPlayer).map((p) => `the ${p.name}`);
   const founded = new Date(nation.foundedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
@@ -110,7 +75,6 @@ export function nationArticle(nation: Nation, content: GameContent): HTMLElement
   fact('Government', governmentName);
   fact('Population', formatPopulation(stats.population));
   fact('Territory', `${territory} star system${territory === 1 ? '' : 's'}`);
-  fact('Colonized worlds', String(worlds.length));
   fact('Standing', `${titles.power.name} power`);
   fact('Founded', founded);
   infobox.append(facts);
@@ -133,22 +97,6 @@ export function nationArticle(nation: Nation, content: GameContent): HTMLElement
     root.append(el('p', '', `It shares the ${map.sector.name} Sector with ${listOf(neighbors)}.`));
   }
 
-  // History: the founding, then the latest notable events from the log.
-  root.append(el('h3', 'article-heading', 'History'));
-  root.append(el('p', '', `The ${short} was founded on ${founded}.`));
-  const events = nation.log.slice(0, RECENT_EVENTS);
-  if (events.length > 0) {
-    root.append(el('p', '', 'Recent events:'));
-    const list = el('ul', 'article-list');
-    for (const entry of events) {
-      const when = new Date(entry.at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-      const item = el('li');
-      item.append(el('span', 'muted', `${when}: `), entry.title);
-      list.append(item);
-    }
-    root.append(list);
-  }
-
   // The capital system: its stars, then every planet, the capital marked.
   root.append(el('h3', 'article-heading', 'Capital system'));
   const starText = home.stars.length === 1
@@ -168,26 +116,5 @@ export function nationArticle(nation: Nation, content: GameContent): HTMLElement
     planetList.append(item);
   });
   root.append(planetList);
-
-  // Colonized worlds across the nation's territory.
-  root.append(el('h3', 'article-heading', 'Colonized worlds'));
-  root.append(el('p', '', worlds.length === 1
-    ? `The ${short} has settled only its capital so far.`
-    : `The ${short} has settled ${worlds.length} worlds across its ${territory} systems.`));
-  const table = el('table', 'article-table');
-  const head = el('tr');
-  for (const label of ['World', 'Type', 'System', 'Moons']) head.append(el('th', '', label));
-  table.append(head);
-  for (const world of worlds) {
-    const row = el('tr');
-    row.append(
-      el('td', world.capital ? 'article-capital' : '', world.capital ? `${world.name} (capital)` : world.name),
-      el('td', '', world.type),
-      el('td', '', world.system),
-      el('td', '', String(world.moons)),
-    );
-    table.append(row);
-  }
-  root.append(table);
   return root;
 }

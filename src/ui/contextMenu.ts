@@ -8,6 +8,8 @@ export interface MenuContent {
   /** Small caps line above the title, like "Star system" or "Planet". */
   eyebrow: string;
   title: string;
+  /** Just the actions, with no heading; the title only names the menu for screen readers. */
+  actionsOnly?: boolean;
   subtitle?: string;
   /** Label and value pairs, shown as a compact table. */
   facts?: [label: string, value: string][];
@@ -45,7 +47,7 @@ export function showContextMenu(x: number, y: number, content: MenuContent): voi
   title.append(content.title);
   head.append(title);
   if (content.subtitle) head.append(el('p', 'muted', content.subtitle));
-  menu.append(head);
+  if (!content.actionsOnly) menu.append(head);
 
   if (content.facts?.length) {
     const facts = el('dl', 'context-menu-facts');

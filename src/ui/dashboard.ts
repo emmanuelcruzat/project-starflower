@@ -13,7 +13,8 @@ export function attentionCount(nation: Nation, now: number): number {
   return nation.incidents.queue.length + nation.operations.filter((op) => isAwaitingDecision(op, now)).length;
 }
 
-export function dashboardView(nation: Nation, content: GameContent, now: number, onOpenPlanner: () => void): HTMLElement {
+/** `article` (the nation's encyclopedia article) goes between the attention banner and the summaries. */
+export function dashboardView(nation: Nation, content: GameContent, now: number, onOpenPlanner: () => void, article: HTMLElement): HTMLElement {
   const root = el('section', 'dashboard');
 
   const waiting = attentionCount(nation, now);
@@ -21,10 +22,11 @@ export function dashboardView(nation: Nation, content: GameContent, now: number,
   banner.append(
     el('span', '', waiting > 0 ? `${waiting} ${waiting === 1 ? 'matter needs' : 'matters need'} your attention` : 'Nothing needs your attention right now'),
   );
-  if (waiting > 0) banner.append(button('Open Planner', 'secondary small', onOpenPlanner));
+  if (waiting > 0) banner.append(button('Open Management', 'secondary small', onOpenPlanner));
 
   root.append(
     banner,
+    article,
     incidentSummary(nation, content, now),
     operationsSummary(nation, content, now),
     ambitionSummary(nation, content, now),

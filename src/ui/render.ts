@@ -3,12 +3,12 @@ import type { NationSetup } from '../engine/nation';
 import { availableOperations, isAwaitingDecision } from '../engine/operations';
 import { fullName } from '../engine/titles';
 import type { GameContent, LogEntry, Nation } from '../types';
-import { byId, el, formatStat } from './dom';
+import { byId, el, formatStat, liveClock } from './dom';
 import { STAT_KEYS } from '../types';
 import { creationView } from './creation';
 import { attentionCount, dashboardView } from './dashboard';
 import { nationArticle } from './article';
-import { galaxyMapView } from './galaxyMap';
+import { diplomacyView, galaxyMapView } from './galaxyMap';
 import { logView } from './log';
 import { overviewView } from './overview';
 import { plannerView, type PlannerHandlers } from './planner';
@@ -17,18 +17,22 @@ import { plannerView, type PlannerHandlers } from './planner';
 // modules. Each render rebuilds the screen from the nation, so the page can
 // never drift out of sync with the state.
 
-export type Tab = 'overview' | 'planner' | 'map' | 'log';
+/**
+ * The galactic map always fills the window. Everything else opens from the
+ * dock along the bottom, in a sheet over the map; null means none is open.
+ */
+export type Tab = 'overview' | 'planner' | 'diplomacy' | 'log';
 
 const TAB_LABELS: Record<Tab, string> = {
   overview: 'Nation Overview',
-  planner: 'Incidents · Operations · Ambitions',
-  map: 'Galactic Map',
+  planner: 'Management',
+  diplomacy: 'Diplomacy',
   log: 'Decision Log',
 };
 
 /** UI-only state. It belongs to this browser window, not to the nation, so it's never saved with it. */
 export interface ViewState {
-  tab: Tab;
+  tab: Tab | null;
   /** The latest decision's result, shown at the top of the planner until closed. */
   outcome: LogEntry | null;
 }
@@ -37,11 +41,12 @@ export interface GameHandlers extends PlannerHandlers {
   onChangePrefix: (prefix: string) => void;
   /** Claims an unclaimed star system on the map; `name` is for the log. */
   onClaimSystem: (system: number, name: string) => void;
-  onSelectTab: (tab: Tab) => void;
+  /** Opens a sheet over the map, or with null, closes it. */
+  onSelectTab: (tab: Tab | null) => void;
 }
 
 export function renderCreation(content: GameContent, onCreate: (setup: NationSetup) => void): void {
-  document.body.classList.remove('map-mode');
+  document.body.classList.remove('game-mode');
   byId('nation-title').textContent = 'Project Starflower';
   byId('screen').replaceChildren(creationView(content, onCreate));
   byId('new-nation').hidden = true;
@@ -50,39 +55,83 @@ export function renderCreation(content: GameContent, onCreate: (setup: NationSet
 export function renderGame(nation: Nation, content: GameContent, now: number, view: ViewState, handlers: GameHandlers): void {
   byId('nation-title').textContent = fullName(nation);
   byId('new-nation').hidden = false;
-  // The map tab stretches the screen to fill the window (see .map-mode in style.css).
-  document.body.classList.toggle('map-mode', view.tab === 'map');
+  // The map fills the window, with the dock over its bottom edge (see .game-mode in style.css).
+  document.body.classList.add('game-mode');
 
-  let body: HTMLElement;
-  if (view.tab === 'overview') {
-    body = el('div', 'overview-layout');
-    const main = dashboardView(nation, content, now, () => handlers.onSelectTab('planner'));
-    main.append(nationArticle(nation, content));
-    body.append(overviewView(nation, content, handlers.onChangePrefix), main);
-  } else if (view.tab === 'planner') {
-    body = plannerView(nation, content, now, view.outcome, handlers);
-  } else if (view.tab === 'map') {
-    body = galaxyMapView(nation, handlers.onClaimSystem);
-  } else {
-    body = logView(nation.log, now);
+  const parts: HTMLElement[] = [galaxyMapView(nation, handlers.onClaimSystem)];
+  if (view.tab) {
+    const close = () => handlers.onSelectTab(null);
+    // A dimmed backdrop over the map: clicking it closes the panel.
+    const backdrop = el('div', 'sheet-backdrop');
+    backdrop.addEventListener('click', close);
+    parts.push(backdrop, sheet(view.tab, sheetBody(view.tab, nation, content, now, view, handlers), close));
   }
-
-  byId('screen').replaceChildren(tabBar(view.tab, attentionCount(nation, now), handlers.onSelectTab), body);
+  parts.push(dock(fullName(nation), view.tab, attentionCount(nation, now), now, handlers.onSelectTab));
+  byId('screen').replaceChildren(...parts);
 }
 
-function tabBar(selected: Tab, attention: number, onSelect: (tab: Tab) => void): HTMLElement {
-  const bar = el('nav', 'tabs');
-  bar.setAttribute('role', 'tablist');
-  for (const tab of Object.keys(TAB_LABELS) as Tab[]) {
-    const b = el('button', `tab ${tab === selected ? 'selected' : ''}`, TAB_LABELS[tab]);
-    b.setAttribute('role', 'tab');
-    b.setAttribute('aria-selected', String(tab === selected));
-    // A badge on the planner tab, so pending work is visible from any tab.
-    if (tab === 'planner' && attention > 0) b.append(el('span', 'badge', String(attention)));
-    b.addEventListener('click', () => onSelect(tab));
-    bar.append(b);
+function sheetBody(tab: Tab, nation: Nation, content: GameContent, now: number, view: ViewState, handlers: GameHandlers): HTMLElement {
+  if (tab === 'overview') {
+    const body = el('div', 'overview-layout');
+    const main = dashboardView(nation, content, now, () => handlers.onSelectTab('planner'), nationArticle(nation, content));
+    body.append(overviewView(nation, content, handlers.onChangePrefix), main);
+    return body;
   }
+  if (tab === 'planner') return plannerView(nation, content, now, view.outcome, handlers);
+  if (tab === 'diplomacy') return diplomacyView(nation);
+  return logView(nation.log, now);
+}
+
+/** A view opened from the dock, over the map, with a title and a close button. Escape closes it too. */
+function sheet(tab: Tab, body: HTMLElement, onClose: () => void): HTMLElement {
+  const node = el('section', 'sheet');
+  node.setAttribute('role', 'dialog');
+  node.setAttribute('aria-label', TAB_LABELS[tab]);
+  const header = el('div', 'sheet-header');
+  const close = el('button', 'secondary small sheet-close', '×');
+  close.title = 'Close and return to the map';
+  close.setAttribute('aria-label', close.title);
+  close.addEventListener('click', onClose);
+  header.append(el('h2', 'sheet-title', TAB_LABELS[tab]), close);
+  const scroller = el('div', 'sheet-body');
+  scroller.append(body);
+  node.append(header, scroller);
+  node.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') onClose();
+  });
+  return node;
+}
+
+/**
+ * The rack of buttons along the bottom: the nation's name, a button for
+ * each view (pressing the open one again closes it), and the clock and New Nation.
+ */
+function dock(title: string, selected: Tab | null, attention: number, now: number, onSelect: (tab: Tab | null) => void): HTMLElement {
+  const bar = el('nav', 'dock');
+  bar.setAttribute('aria-label', 'Game views');
+  const buttons = el('div', 'dock-buttons');
+  for (const tab of Object.keys(TAB_LABELS) as Tab[]) {
+    const b = iconButton(`dock-button ${tab === selected ? 'selected' : ''}`, TAB_LABELS[tab]);
+    b.setAttribute('aria-pressed', String(tab === selected));
+    // A badge on the planner, so pending work is visible from anywhere.
+    if (tab === 'planner' && attention > 0) b.append(el('span', 'badge', String(attention)));
+    b.addEventListener('click', () => onSelect(tab === selected ? null : tab));
+    buttons.append(b);
+  }
+  // The real New Nation button lives in the (hidden) top bar, where main.ts listens to it.
+  const restart = iconButton('dock-button dock-restart', 'New Nation');
+  restart.addEventListener('click', () => byId('new-nation').click());
+  const right = el('div', 'dock-right');
+  right.append(liveClock(now), restart);
+  bar.append(el('span', 'dock-title', title), buttons, right);
   return bar;
+}
+
+/** A dock button: an icon (PLACEHOLDER: blank until real icons are drawn), then its name. */
+function iconButton(className: string, label: string): HTMLButtonElement {
+  const b = el('button', className);
+  b.append(el('span', 'dock-icon'), el('span', 'dock-label', label));
+  return b;
 }
 
 /**

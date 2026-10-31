@@ -86,6 +86,8 @@ export interface GalaxyMap {
   home: number;
   sector: MapSector;
   constellations: MapConstellation[];
+  /** The large empty stretches with names on the map. */
+  voids: SectorVoid[];
 }
 
 export function generateMap(nation: Nation): GalaxyMap {
@@ -117,7 +119,8 @@ export function generateMap(nation: Nation): GalaxyMap {
   for (const i of nation.claimedSystems ?? []) {
     if (owners[i] === null) owners[i] = 0;
   }
-  return { systems, lanes, powers, owners, home, sector, constellations };
+  const voids = namedVoids(nation.id, systems);
+  return { systems, lanes, powers, owners, home, sector, constellations, voids };
 }
 
 // --- Systems and lanes ---
@@ -135,6 +138,20 @@ export function generateMap(nation: Nation): GalaxyMap {
  * anything else. The star map's dust follows it too.
  */
 export function sectorShape(seed: string): (x: number, y: number) => number {
+  const { outline, voids } = sectorGeometry(seed);
+  return (x, y) => {
+    let depth = outline(x, y);
+    // In a void, count the point as further out, most of all at its middle.
+    for (const v of voids) {
+      const near = 1 - Math.hypot(x - v.x, y - v.y) / v.r;
+      if (near > 0) depth += near * 1.2;
+    }
+    return depth;
+  };
+}
+
+/** The sector's wobbly oval outline (depth as in sectorShape, ignoring voids), and its voids. */
+function sectorGeometry(seed: string): { outline: (x: number, y: number) => number; voids: { x: number; y: number; r: number }[] } {
   const random = seededRandom(`${seed}/shape`);
   const waves = SHAPE.waves.map((k) => ({ k, phase: random() * Math.PI * 2, size: (0.5 + random() * 0.5) / k }));
   const total = waves.reduce((sum, w) => sum + w.size, 0);
@@ -147,20 +164,53 @@ export function sectorShape(seed: string): (x: number, y: number) => number {
     y: cy + (random() - 0.5) * ry * 1.2,
     r: SHAPE.voids.radius.min + random() * (SHAPE.voids.radius.max - SHAPE.voids.radius.min),
   }));
-  return (x, y) => {
+  const outline = (x: number, y: number) => {
     const dx = (x - cx) / rx;
     const dy = (y - cy) / ry;
     const angle = Math.atan2(dy, dx);
     // The edge's distance from the middle in this direction, never past the map's edge.
     const edge = Math.min(1, SHAPE.base + (SHAPE.wobble / total) * waves.reduce((sum, w) => sum + w.size * Math.sin(w.k * angle + w.phase), 0));
-    let depth = Math.hypot(dx, dy) / edge;
-    // In a void, count the point as further out, most of all at its middle.
-    for (const v of voids) {
-      const near = 1 - Math.hypot(x - v.x, y - v.y) / v.r;
-      if (near > 0) depth += near * 1.2;
-    }
-    return depth;
+    return Math.hypot(dx, dy) / edge;
   };
+  return { outline, voids };
+}
+
+/** An empty stretch of the sector big enough to be named on the map. */
+export interface SectorVoid {
+  name: string;
+  x: number;
+  y: number;
+  r: number;
+}
+
+/**
+ * Naming voids: one counts if its middle is this far inside the sector's
+ * outline (1 is the edge) and no system is closer to its middle than
+ * `clear` of its radius, so the name lands in visibly empty space.
+ */
+const VOID_NAMING = { inside: 0.85, clear: 0.3 };
+const VOID_WORDS = ['Void', 'Deep', 'Expanse', 'Gulf', 'Abyss', 'Hollow'];
+
+/** The sector's voids that are inside it and empty, each with a name like "Velion Deep". From their own stream. */
+function namedVoids(seed: string, systems: StarSystem[]): SectorVoid[] {
+  const { outline, voids } = sectorGeometry(seed);
+  const random = seededRandom(`${seed}/voids`);
+  const pick = (list: string[]) => list[Math.floor(random() * list.length)];
+  const named: SectorVoid[] = [];
+  for (const v of voids) {
+    // Drawn for every void, kept or not, so the names stay put if the rules change.
+    let word: string;
+    // Skipping pile-ups like "Neeek", as system names do.
+    do word = pick(NAME_STARTS) + pick(NAME_MIDDLES) + pick(NAME_ENDS);
+    while (/[aeiouy]{3}|(.)\1\1/i.test(word));
+    const name = `${word} ${pick(VOID_WORDS)}`;
+    if (outline(v.x, v.y) > VOID_NAMING.inside) continue;
+    if (systems.some((s) => Math.hypot(s.x - v.x, s.y - v.y) < v.r * VOID_NAMING.clear)) continue;
+    // Voids can overlap into one empty patch; that patch gets only the first name.
+    if (named.some((n) => Math.hypot(n.x - v.x, n.y - v.y) < Math.max(n.r, v.r))) continue;
+    named.push({ name, ...v });
+  }
+  return named;
 }
 
 function placeSystems(random: Random, shape: (x: number, y: number) => number): StarSystem[] {

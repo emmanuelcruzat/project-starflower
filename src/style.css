@@ -663,43 +663,245 @@ button.link-button:hover {
 
 /* --- Galactic Map (placeholder) --- */
 
-/* The map tab fills the window: the page stops scrolling and the screen
-   stretches into whatever space the top bar and tabs leave. */
-body.map-mode {
-  display: flex;
-  flex-direction: column;
+/* In the game, the map fills the whole window and the page never scrolls.
+   The top bar is hidden: the nation's name and New Nation move into the
+   dock along the bottom (render.ts), and the other views open in a sheet
+   over the map. */
+:root {
+  --dock-height: 52px;
+}
+
+body.game-mode {
   height: 100vh;
   height: 100dvh;
   min-height: 0;
   overflow: hidden;
 }
 
-body.map-mode .topbar {
-  max-width: none;
-  width: 100%;
+body.game-mode .topbar {
+  display: none;
 }
 
-body.map-mode #screen {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  width: 100%;
+body.game-mode #screen {
+  position: fixed;
+  inset: 0;
   max-width: none;
-  padding-bottom: 0;
+  padding: 0;
 }
 
-body.map-mode .tabs {
-  margin-bottom: 0;
+body.game-mode .dev-banner {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  z-index: 30;
+  transform: translateX(-50%);
+  margin: 8px 0 0;
 }
 
 .map-panel {
-  flex: 1;
-  min-height: 0;
+  position: absolute;
+  inset: 0;
   padding: 0;
   overflow: hidden;
-  border-top: none;
-  border-radius: 0 0 4px 4px;
+  border: none;
+  border-radius: 0;
+}
+
+/* --- Dock: the rack of buttons along the bottom --- */
+
+.dock {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  /* Name | buttons, centered | New Nation. */
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  height: var(--dock-height);
+  padding: 0 16px;
+  background: rgba(6, 8, 13, 0.88);
+  border-top: 1px solid var(--panel-edge);
+  backdrop-filter: blur(6px);
+}
+
+.dock-title {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  color: var(--accent);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.dock-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+/* An icon, then the button's name. */
+.dock .dock-button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  margin: 0;
+  padding: 0 14px 0 10px;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--muted);
+  background: none;
+  border: 1px solid var(--panel-edge);
+  border-radius: 3px;
+}
+
+/* PLACEHOLDER icon: a dashed square, in the button's color, until real icons are drawn. */
+.dock-icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border: 1.5px dashed currentColor;
+  border-radius: 2px;
+}
+
+/* The planner's count of pending matters sits on the button's corner. */
+.dock .dock-button .badge {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+}
+
+.dock .dock-button:hover {
+  color: var(--text);
+  border-color: var(--muted);
+}
+
+.dock .dock-button.selected {
+  color: var(--accent);
+  background: var(--panel);
+  border-color: var(--accent);
+}
+
+/* The clock and New Nation sit at the far right, balancing the name on the left. */
+.dock-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.dock .clock {
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-2);
+  white-space: nowrap;
+}
+
+/* --- Sheet: a view opened from the dock, over the map --- */
+
+/* Behind an open panel, over the map (but not the dock): dims the map, and a click on it closes the panel. */
+.sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 14;
+  background: rgba(2, 3, 6, 0.45);
+  animation: backdrop-fade 0.18s ease-out;
+}
+
+@keyframes backdrop-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet-backdrop {
+    animation: none;
+  }
+}
+
+.sheet {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--dock-height) + 12px);
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  width: min(1080px, calc(100% - 32px));
+  max-height: calc(100% - var(--dock-height) - 24px);
+  transform: translateX(-50%);
+  background: rgba(8, 11, 18, 0.96);
+  border: 1px solid var(--panel-edge);
+  border-top: 2px solid var(--accent);
+  border-radius: 4px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  animation: sheet-rise 0.18s ease-out;
+}
+
+@keyframes sheet-rise {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 16px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet {
+    animation: none;
+  }
+}
+
+.sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--panel-edge);
+}
+
+.sheet-title {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.sheet button.sheet-close {
+  margin: 0;
+}
+
+.sheet-body {
+  overflow-y: auto;
+  padding: 16px;
+}
+
+/* On narrow screens the name gives way, and the buttons scroll sideways if they must. */
+@media (max-width: 760px) {
+  .dock {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 0 8px;
+  }
+
+  .dock-title {
+    display: none;
+  }
+
+  .dock-buttons {
+    overflow-x: auto;
+  }
 }
 
 .map-viewport {
@@ -746,10 +948,20 @@ body.map-mode .tabs {
   pointer-events: none;
 }
 
-.map-header {
+/* The left column: the trail at the top, the info panel under it, and the
+   legend at the bottom. The info panel scrolls when they'd meet. */
+.map-left {
   top: 12px;
   left: 16px;
-  max-width: min(520px, calc(100% - 32px));
+  bottom: calc(var(--dock-height) + 12px);
+  width: min(340px, calc(100% - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.map-header {
+  flex: none;
   padding: 8px 12px;
   background: rgba(6, 8, 13, 0.72);
   border: 1px solid var(--panel-edge);
@@ -793,11 +1005,6 @@ body.map-mode .tabs {
   color: var(--muted);
 }
 
-.map-header p {
-  margin: 2px 0 0;
-  font-size: 0.85rem;
-}
-
 .map-buttons {
   top: 12px;
   right: 16px;
@@ -811,32 +1018,10 @@ body.map-mode .tabs {
   background: rgba(6, 8, 13, 0.72);
 }
 
-/* Legend and note stacked down the left edge, under the header, so the
-   bottom of the map stays clear. */
-.map-footer {
-  left: 16px;
-  bottom: 12px;
-  width: min(340px, calc(100% - 32px));
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 8px;
-}
-
-.map-footer > * {
-  padding: 12px 16px;
-  background: rgba(6, 8, 13, 0.72);
-  border: 1px solid var(--panel-edge);
-  border-radius: 3px;
-}
-
+/* The legend, pushed to the bottom of the left column. */
 @media (max-width: 760px) {
-  .map-header {
+  .map-left {
     top: 56px;
-  }
-
-  .map-note {
-    display: none;
   }
 }
 
@@ -891,6 +1076,7 @@ body.map-mode .tabs {
 .starmap .constellation-name {
   font-family: var(--mono);
   font-size: 10px;
+  font-style: italic;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   fill: var(--accent-2);
@@ -904,6 +1090,27 @@ body.map-mode .tabs {
 }
 
 .starmap .constellation-name:hover {
+  fill-opacity: 0.9;
+}
+
+/* A named void's tag: like a constellation's, but quieter and wider-spaced.
+   Clicking it shows the void's info (galaxyMap.ts). */
+.starmap .void-name {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  fill: var(--muted);
+  fill-opacity: 0.5;
+  paint-order: stroke;
+  stroke: #04060a;
+  stroke-width: 3px;
+  cursor: pointer;
+  pointer-events: bounding-box;
+  transition: fill-opacity 0.15s;
+}
+
+.starmap .void-name:hover {
   fill-opacity: 0.9;
 }
 
@@ -950,15 +1157,10 @@ body.map-mode .tabs {
   filter: drop-shadow(0 0 2px var(--star));
 }
 
-.starmap .system.previewed .home-ring {
-  transform: scale(1.7);
-  transform-box: fill-box;
-  transform-origin: center;
-}
-
-/* The system's name is moved below the rings from galaxyMap.ts; this just eases it. */
+/* The system's name (and the capital's box) is moved below the rings from galaxyMap.ts; this just eases it. */
+.starmap .system.previewed .home-tag,
 .starmap .system.previewed .system-label {
-  transition: opacity 0.15s, transform 0.2s;
+  transition: opacity 0.15s, translate 0.2s, scale 0.15s;
 }
 
 /* No frame: a soft dark blur behind a system's rings (or a constellation's
@@ -1039,10 +1241,8 @@ button.link-button.map-system-link:hover {
 }
 
 .map-info {
-  top: 56px;
-  right: 16px;
-  width: min(320px, calc(100% - 32px));
-  max-height: calc(100% - 150px);
+  flex: 0 1 auto;
+  min-height: 0;
   overflow-y: auto;
   padding: 12px 14px;
   background: rgba(6, 8, 13, 0.88);
@@ -1107,24 +1307,14 @@ button.link-button.map-system-link:hover {
   font-size: 0.78rem;
 }
 
-.map-info-holdings {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 12px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: 0.78rem;
-}
-
-.map-info-holdings li {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
 .map-info .swatch {
   flex-shrink: 0;
+}
+
+/* A constellation's or void's short description. */
+.map-info-description {
+  margin: 6px 0 8px;
+  font-size: 0.85rem;
 }
 
 .map-info-neighbours {
@@ -1160,8 +1350,19 @@ button.link-button.map-system-link:hover {
   flex-direction: column;
   gap: 6px;
   margin: 0;
+  padding: 0;
   list-style: none;
   font-size: 0.85rem;
+}
+
+/* The Diplomacy panel: the list of powers, kept narrow so counts stay near their names. */
+.diplomacy {
+  max-width: 480px;
+}
+
+.diplomacy .eyebrow {
+  margin: 0 0 12px;
+  font-weight: normal;
 }
 
 .map-legend li {
@@ -1288,7 +1489,7 @@ button.link-button.map-system-link:hover {
 }
 
 /* Neighbors of the focus keep their names showing, but quieter: smaller
-   and dimmer, until hovered. The home system keeps its amber. */
+   and dimmer, until hovered. The capital keeps its boxed name as it is. */
 .starmap .system.lit.neighbour .system-label {
   font-size: 8px;
   fill: var(--muted);
@@ -1302,7 +1503,7 @@ button.link-button.map-system-link:hover {
 }
 
 .starmap .system.home.lit.neighbour .system-label {
-  fill: var(--accent);
+  fill: var(--text);
 }
 
 /* Zoomed far in, every system's name fades in, in the same quiet style as
@@ -1323,26 +1524,51 @@ button.link-button.map-system-link:hover {
   opacity: 1;
 }
 
-/* The player's home system is always labeled. Its star keeps its own
-   color; the dashed ring marks it as home. */
+/* The player's capital: an ordinary name tag, in a box of its own with an
+   amber edge (sized in galaxyMap.ts, HOME_TAG). Zoomed out, the tag fades
+   in step with every other system's name. Hovered or lit, it shows. */
+.starmap .home {
+  --names-start: 2;
+  --names-end: 2.5;
+  --tag-shown: clamp(0, (var(--zoom, 1) - var(--names-start)) / (var(--names-end) - var(--names-start)), 1);
+}
+
 .starmap .home .system-label {
+  font-size: 8px;
+}
+
+.starmap .home .system-label,
+.starmap .home .home-tag {
+  opacity: var(--tag-shown);
+}
+
+.starmap .home:is(.lit, :hover, :focus-visible) .system-label,
+.starmap .home:is(.lit, :hover, :focus-visible) .home-tag {
   opacity: 1;
-  fill: var(--accent);
 }
 
-.starmap .home-ring {
-  fill: none;
+.starmap .home .system-label,
+.starmap .home-tag {
+  transform-box: view-box;
+  transition: opacity 0.15s, translate 0.2s, scale 0.15s;
+}
+
+.starmap .home-tag {
+  fill: rgba(6, 8, 13, 0.85);
   stroke: var(--accent);
-  stroke-width: 1.5;
-  stroke-dasharray: 4 3;
+  stroke-width: 1;
+  pointer-events: none;
 }
 
-.map-note {
-  margin: 0;
-  padding: 12px 16px;
-  font-size: 0.85rem;
-  color: var(--muted);
-  border-left: 2px solid var(--accent-2);
+/* Hovered, or in focus (selected, or in a selected constellation), it's
+   full-size like any system's name (8px to 12px), its box with it. */
+.starmap .home.lit:not(.neighbour) .system-label,
+.starmap .home.lit:not(.neighbour) .home-tag,
+.starmap .home:hover .system-label,
+.starmap .home:hover .home-tag,
+.starmap .home:focus-visible .system-label,
+.starmap .home:focus-visible .home-tag {
+  scale: 1.5;
 }
 
 /* --- Dev panel --- */
@@ -1401,10 +1627,6 @@ button.link-button.map-system-link:hover {
 }
 
 /* The legend and the note are about the borders in your sector, so they go with it. */
-.map-viewport:not([data-view='sector']) .map-footer {
-  display: none;
-}
-
 .region-map .sector {
   cursor: pointer;
   outline: none;
@@ -1838,6 +2060,12 @@ button.link-button.map-system-link:hover {
   border-top: 1px solid var(--panel-edge);
 }
 
+/* A menu of actions alone (no heading above them). */
+.context-menu-actions:first-child {
+  margin-top: -12px;
+  border-top: none;
+}
+
 button.context-menu-action {
   margin: 0;
   padding: 7px 14px;
@@ -1987,28 +2215,6 @@ button.context-menu-action:focus-visible {
   display: inline-block;
   margin-right: 6px;
   vertical-align: middle;
-}
-
-.article-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.85rem;
-}
-
-.article-table th,
-.article-table td {
-  padding: 5px 8px;
-  text-align: left;
-  border-bottom: 1px solid var(--panel-edge);
-}
-
-.article-table th {
-  color: var(--muted);
-  font-weight: 600;
-}
-
-.article-capital {
-  color: var(--accent);
 }
 
 @media (max-width: 760px) {

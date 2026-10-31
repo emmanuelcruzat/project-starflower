@@ -84,6 +84,13 @@ const PREVIEW = { starScale: 2, planetScale: 0.55, firstGap: 5, step: 5, gap: 5 
  * middle (in map units).
  */
 const NAME_SEARCH = { radius: 50, step: 10, pull: 0.25 };
+/**
+ * The box round the capital's name on the star map, in map units: the
+ * label is 8px monospace like other system names, about 0.59 of that wide
+ * per character, with text `ascent` above its baseline and `height` tall in
+ * all. Keep in step with .home .system-label in style.css.
+ */
+const HOME_TAG = { charWidth: 4.7, ascent: 7, height: 8.7, padX: 4, padY: 2 };
 /** The glow of a black hole's accretion disc. Keep in step with .star.black-hole in style.css. */
 const ACCRETION_COLOUR = '#ffb36b';
 
@@ -171,7 +178,7 @@ export function galaxyMapView(nation: Nation, onClaim: (system: number, name: st
   const litLayer = svg('g', { class: 'lit-layer' });
   starmap.append(shade, litLayer);
 
-  const info = el('aside', 'map-hud map-info');
+  const info = el('aside', 'map-info');
   const crumbs = el('nav', 'map-crumbs');
   crumbs.setAttribute('aria-label', 'Map focus');
 
@@ -228,7 +235,7 @@ export function galaxyMapView(nation: Nation, onClaim: (system: number, name: st
       // A focused constellation's own stars glow like a focused system's star.
       node.classList.toggle('glowing', next?.kind === 'constellation' && members.has(n));
       node.classList.remove('previewed');
-      node.querySelector<SVGTextElement>('.system-label')?.style.removeProperty('transform');
+      node.querySelectorAll<SVGElement>('.system-label, .home-tag').forEach((part) => part.style.removeProperty('translate'));
       if (isLit) litLayer.append(node);
     });
     // A focused constellation's name shows above the shade too, highlighted,
@@ -254,7 +261,10 @@ export function galaxyMapView(nation: Nation, onClaim: (system: number, name: st
       const label = star.querySelector<SVGTextElement>('.system-label');
       if (label) {
         const gap = Number(label.getAttribute('y')) - map.systems[next.index].y;
-        label.style.transform = `translateY(${Math.max(0, preview.below + 10 - gap).toFixed(1)}px)`;
+        // The capital's box moves with its name. `translate`, not `transform`,
+        // so the capital's hover growth (`scale`) still works on top of it.
+        const shift = `0 ${Math.max(0, preview.below + 10 - gap).toFixed(1)}px`;
+        star.querySelectorAll<SVGElement>('.system-label, .home-tag').forEach((part) => { part.style.translate = shift; });
       }
     }
 
@@ -271,8 +281,8 @@ export function galaxyMapView(nation: Nation, onClaim: (system: number, name: st
       const x = points.reduce((sum, p) => sum + p.x, 0) / points.length;
       const y = points.reduce((sum, p) => sum + p.y, 0) / points.length;
       const zoom = Math.max(camera!.zoom, FOCUS_ZOOM[next.kind]);
-      // Center it in the part of the map the panel doesn't cover.
-      controls.lookAt(x + info.offsetWidth / 2 / zoom, y, zoom);
+      // Center it in the part of the map the panel (on the left) doesn't cover.
+      controls.lookAt(x - info.offsetWidth / 2 / zoom, y, zoom);
     }
   };
 
@@ -298,6 +308,7 @@ export function galaxyMapView(nation: Nation, onClaim: (system: number, name: st
     lastStarTap = star ? { index: Number(star.getAttribute('data-system')), time: now, before: focused.get(nation.id) ?? null } : null;
     if (star) focus({ kind: 'system', index: Number(star.getAttribute('data-system')) }, true);
     else if (name) focus({ kind: 'constellation', index: Number(name.getAttribute('data-constellation')) }, true);
+    else if (target?.closest('.void-name')) showVoid(Number(target.closest('.void-name')!.getAttribute('data-void')));
     else focus(null, false);
   }, () => {
     // Escape steps out: system, constellation, sector, then the region.
@@ -415,14 +426,6 @@ export function galaxyMapView(nation: Nation, onClaim: (system: number, name: st
     else if (index !== null) pickRegion(index);
   });
 
-  const summary = el('p', 'muted');
-  const summaries: Record<View, string> = {
-    system: 'Orbits are drawn to show order, not scale. Hover a body for its name; zoom out or press Escape to return to the sector.',
-    sector: `${map.systems.length} known star systems in ${map.constellations.length} constellations, joined by ${map.lanes.length} hyperlanes. Drag to move, scroll to zoom, click a constellation or a star to learn more, double-click a star to open its system.${SHOW_OUTER_VIEWS ? ' Zoom out to see the region.' : ''}`,
-    region: `${region.sectors.length} sectors in the ${region.name} Region. Only ${map.sector.name} has been charted: click it, or zoom in on it, to open its star map. Zoom out to see the galaxy.`,
-    galaxy: `${galaxy.regions.length} regions around the core of the ${galaxy.name} Galaxy. Only ${region.name} has been surveyed: click it, or zoom in on it, to see its sectors.`,
-  };
-
   // Each level's map, its controls, and where the level below it sits on
   // it (the point a zoom between them grows out of or shrinks into).
   const levels: Record<View, { node: SVGSVGElement; controls: MapControls; child?: () => Point; depth: number }> = {
@@ -450,7 +453,6 @@ export function galaxyMapView(nation: Nation, onClaim: (system: number, name: st
     const previous = views.get(nation.id) ?? 'sector';
     views.set(nation.id, next);
     viewport.dataset.view = next;
-    summary.textContent = summaries[next];
     const level = levels[next];
     const out = level.depth > levels[previous].depth;
 
@@ -510,7 +512,33 @@ export function galaxyMapView(nation: Nation, onClaim: (system: number, name: st
     }
     return actions;
   };
+  /** Shows a void's description in the info panel, with the camera on it. Voids aren't a focus: nothing is selected. */
+  const showVoid = (index: number) => {
+    focus(null, false);
+    playChirp('constellation');
+    info.hidden = false;
+    info.replaceChildren(...voidPanel(map, index, focus));
+    info.scrollTop = 0;
+    const v = map.voids[index];
+    const zoom = Math.max(camera!.zoom, FOCUS_ZOOM.constellation);
+    controls.lookAt(v.x - info.offsetWidth / 2 / zoom, v.y, zoom);
+  };
   const menuFor = (target: Element): MenuContent | null => {
+    // A constellation's or void's name: just a way to its description.
+    const constellationName = target.closest('.constellation-name');
+    if (constellationName) {
+      const index = Number(constellationName.getAttribute('data-constellation'));
+      return {
+        eyebrow: 'Constellation', title: map.constellations[index].name, actionsOnly: true,
+        actions: [{ label: 'Show info', run: () => focus({ kind: 'constellation', index }, true) }],
+      };
+    }
+    const voidName = target.closest('.void-name');
+    if (voidName) {
+      const index = Number(voidName.getAttribute('data-void'));
+      return { eyebrow: 'Void', title: map.voids[index].name, actionsOnly: true, actions: [{ label: 'Show info', run: () => showVoid(index) }] };
+    }
+
     // Which system the bodies under the pointer belong to: the open diagram's, or the focused one's miniature.
     const now = focused.get(nation.id);
     const owner = current() === 'system' ? openSystems.get(nation.id) ?? null : now?.kind === 'system' ? now.index : null;
@@ -558,11 +586,8 @@ export function galaxyMapView(nation: Nation, onClaim: (system: number, name: st
     return [link, el('span', 'map-crumb-separator', '›'), el('span', 'map-crumb current', `${region.name} Region`)];
   };
 
-  const header = el('div', 'map-hud map-header');
-  header.append(
-    crumbs,
-    summary,
-  );
+  const header = el('div', 'map-header');
+  header.append(crumbs);
 
   const buttons = el('div', 'map-hud map-buttons');
   const button = (label: string, title: string, onClick: () => void) => {
@@ -587,13 +612,11 @@ export function galaxyMapView(nation: Nation, onClaim: (system: number, name: st
     button('Galaxy', `Show the whole ${galaxy.name} Galaxy`, () => goTo('galaxy'));
   }
 
-  const footer = el('div', 'map-hud map-footer');
-  footer.append(
-    legend(map),
-    el('p', 'map-note', 'Stellar cartography is still underway. These borders are a preview: territory, neighboring nations and travel will come in a future version.'),
-  );
+  // Down the left edge: the trail, and the info panel under it.
+  const left = el('div', 'map-hud map-left');
+  left.append(header, info);
 
-  viewport.append(systemMap, starmap, regionMap, galaxyMap, header, buttons, info, footer);
+  viewport.append(systemMap, starmap, regionMap, galaxyMap, left, buttons);
   panel.append(viewport);
   // The screen is rebuilt every so often; restore the view and focus without moving the camera.
   showView(views.get(nation.id) ?? 'sector', 'none');
@@ -660,22 +683,9 @@ function systemRow(map: GalaxyMap, i: number, focus: FocusHandler, note = ownerN
   return item;
 }
 
-/** The sector's summary, then the focused constellation's details. */
+/** The focused constellation's details. */
 function constellationPanel(map: GalaxyMap, index: number, focus: FocusHandler): HTMLElement[] {
   const constellation = map.constellations[index];
-
-  // Sector: who holds how much of it, largest first.
-  const holdings = map.powers
-    .map((_, power) => ({ power, count: map.owners.filter((o) => o === power).length }))
-    .filter((h) => h.count > 0)
-    .sort((a, b) => b.count - a.count);
-  const sector = el('section', 'map-info-section');
-  sector.append(
-    el('p', 'eyebrow', 'Sector'),
-    el('h3', 'map-info-title', map.sector.name),
-    el('p', 'muted', `${map.constellations.length} constellations · ${map.systems.length} systems · ${map.owners.filter((o) => o === null).length} unclaimed`),
-    ownerList(holdings.map((h) => ({ power: h.power, label: ownerName(map, h.power), count: h.count }))),
-  );
 
   // Constellation: its systems, who owns them, and where its lanes lead.
   const members = new Set(constellation.systems);
@@ -691,12 +701,56 @@ function constellationPanel(map: GalaxyMap, index: number, focus: FocusHandler):
     el('p', 'eyebrow', 'Constellation'),
     el('h3', 'map-info-title', constellation.name),
     el('p', 'muted', `${constellation.systems.length} systems · lanes to ${neighbours.size} neighboring constellation${neighbours.size === 1 ? '' : 's'}`),
+    el('p', 'map-info-description', constellationBlurb(map, index)),
     systems,
   );
   if (neighbours.size > 0) {
     part.append(el('p', 'map-info-neighbours', `Connects to ${[...neighbours].map((n) => map.constellations[n].name).join(', ')}.`));
   }
-  return [closeButton(focus), sector, part];
+  return [closeButton(focus), part];
+}
+
+/** "a Class G star", "a red giant", "a black hole": how a sentence names a star type. */
+function starPhrase(star: StarType): string {
+  const name = star.name.startsWith('Class') ? `${star.name} star` : star.name.toLowerCase();
+  return `${/^[aeiou]/i.test(name) ? 'an' : 'a'} ${name}`;
+}
+
+/** A sentence or two about a constellation: who holds it, and its most striking star. */
+function constellationBlurb(map: GalaxyMap, index: number): string {
+  const members = map.constellations[index].systems;
+  const holders = new Map<number | null, number>();
+  for (const i of members) holders.set(map.owners[i], (holders.get(map.owners[i]) ?? 0) + 1);
+  const claimed = [...holders.entries()].filter(([owner]) => owner !== null).sort((a, b) => b[1] - a[1]);
+  const held = claimed.length === 0 ? 'none of them claimed by any power'
+    : claimed.length === 1 && !holders.has(null) ? `all held by the ${ownerName(map, claimed[0][0]).replace(' (you)', ', your nation')}`
+      : claimed[0][1] > members.length / 2 ? `most of them held by the ${ownerName(map, claimed[0][0]).replace(' (you)', ', your nation')}`
+        : 'split between several powers and open space';
+  // The biggest primary star stands out most; a black hole beats them all.
+  const rank = (i: number) => (map.systems[i].stars[0].exotic === 'black-hole' ? Infinity : map.systems[i].stars[0].radius);
+  const brightest = members.reduce((best, i) => (rank(i) > rank(best) ? i : best));
+  return `A cluster of ${members.length} star systems, ${held}. Its most striking star is ${map.systems[brightest].name}, ${starPhrase(map.systems[brightest].stars[0])}.`;
+}
+
+/** The info panel for a void: what it is, and which constellations border it. */
+function voidPanel(map: GalaxyMap, index: number, focus: FocusHandler): HTMLElement[] {
+  const v = map.voids[index];
+  // Its neighbors: the constellations with systems nearest its edge, closest first.
+  const nearest = new Map<number, number>();
+  map.systems.forEach((s, i) => {
+    const d = Math.hypot(s.x - v.x, s.y - v.y);
+    const c = map.systems[i].constellation;
+    if (d < v.r * 1.4 && d < (nearest.get(c) ?? Infinity)) nearest.set(c, d);
+  });
+  const borders = [...nearest.entries()].sort((a, b) => a[1] - b[1]).slice(0, 3).map(([c]) => map.constellations[c].name);
+  const bordered = borders.length === 0 ? '' : ` It is bordered by ${borders.length === 1 ? borders[0] : `${borders.slice(0, -1).join(', ')} and ${borders[borders.length - 1]}`}.`;
+  const part = el('section', 'map-info-section');
+  part.append(
+    el('p', 'eyebrow', 'Void'),
+    el('h3', 'map-info-title', v.name),
+    el('p', 'map-info-description', `A wide, starless stretch of the ${map.sector.name} Sector. Ships cross it only on their way somewhere else.${bordered}`),
+  );
+  return [closeButton(focus), part];
 }
 
 /**
@@ -838,18 +892,6 @@ function systemPanel(map: GalaxyMap, index: number, nearby: number[], planets: P
   }
   part.append(el('p', 'stat-label map-info-subhead', 'Connections'), list);
   return [closeButton(focus), part];
-}
-
-/** Who holds how many of the sector's systems, as a compact wrapping row. */
-function ownerList(rows: { power: number | null; label: string; count: number }[]): HTMLElement {
-  const list = el('ul', 'map-info-holdings');
-  for (const row of rows) {
-    const item = el('li');
-    item.title = `${row.label}: ${row.count} systems`;
-    item.append(el('span', `swatch ${row.power === null ? 'unclaimed' : `power-${row.power}`}`), el('span', '', `${row.label} ${row.count}`));
-    list.append(item);
-  }
-  return list;
 }
 
 /**
@@ -1219,7 +1261,6 @@ function drawMap(map: GalaxyMap, seed: string, exits: SectorExit[]): SVGSVGEleme
     title.textContent = `${system.name} · ${describeStars(system.stars)} · ${ownerName}`;
     // An invisible, larger circle makes small stars easy to hover.
     group.append(title, svg('circle', { cx: x, cy: y, r: 12, class: 'hit' }));
-    if (isHome) group.append(svg('circle', { cx: x, cy: y, r: 11, class: 'home-ring' }));
     // Companion stars sit just beside the primary, smaller. The system's
     // miniature draws them in their own places instead, so they hide when it's showing.
     const [primary, ...companions] = system.stars;
@@ -1232,13 +1273,26 @@ function drawMap(map: GalaxyMap, seed: string, exits: SectorExit[]): SVGSVGEleme
     group.append(starCircle(primary, system.x, system.y, primary.radius));
 
     // The name sits centered under the stars.
+    const labelY = system.y + Math.max(...bottoms) + 12;
     const label = svg('text', {
       x: x,
-      y: (system.y + Math.max(...bottoms) + 12).toFixed(1),
+      y: labelY.toFixed(1),
       class: 'system-label',
       'text-anchor': 'middle',
     });
-    label.textContent = isHome ? `${system.name} · ${ownerName}` : system.name;
+    label.textContent = system.name;
+    // The capital's name is always showing, in a box of its own. The label
+    // font is monospaced, so the name's width is known without measuring.
+    if (isHome) {
+      const width = system.name.length * HOME_TAG.charWidth + 2 * HOME_TAG.padX;
+      // Hovering grows the name and its box together (style.css), from the box's middle.
+      const origin = `transform-origin: ${x}px ${(labelY - HOME_TAG.ascent / 2).toFixed(1)}px`;
+      group.append(svg('rect', {
+        x: (system.x - width / 2).toFixed(1), y: (labelY - HOME_TAG.ascent - HOME_TAG.padY).toFixed(1),
+        width: width.toFixed(1), height: HOME_TAG.height + 2 * HOME_TAG.padY, rx: 2, class: 'home-tag', style: origin,
+      }));
+      label.setAttribute('style', origin);
+    }
     group.append(label);
     root.append(group);
   });
@@ -1353,6 +1407,14 @@ function constellationLayer(map: GalaxyMap): SVGGElement {
     label.textContent = constellation.name;
     layer.append(label);
   });
+  // The named voids, written across their empty middles.
+  map.voids.forEach((v, index) => {
+    const label = svg('text', {
+      x: v.x.toFixed(1), y: v.y.toFixed(1), class: 'void-name', 'text-anchor': 'middle', 'dominant-baseline': 'central', 'data-void': index,
+    });
+    label.textContent = v.name;
+    layer.append(label);
+  });
   return layer;
 }
 
@@ -1380,6 +1442,14 @@ function dust(seed: string, width = MAP_WIDTH, height = MAP_HEIGHT, count = DUST
     }));
   }
   return group;
+}
+
+/** The Diplomacy panel (opened from the dock): every power in the sector, with its color and how many systems it holds. */
+export function diplomacyView(nation: Nation): HTMLElement {
+  const map = generateMap(nation);
+  const panel = el('section', 'panel diplomacy');
+  panel.append(el('h3', 'eyebrow', `Powers of the ${map.sector.name} Sector`), legend(map));
+  return panel;
 }
 
 function legend(map: GalaxyMap): HTMLElement {
@@ -1903,12 +1973,7 @@ function bodiesSection(map: GalaxyMap, index: number, planets: Planet[]): HTMLEl
     const moons = planets[k].moons.length;
     row(planets[k].type.colour, names[k], `${planets[k].type.name}${moons > 0 ? ` · ${moons} moon${moons === 1 ? '' : 's'}` : ''}`);
   }
-  const wide = planets.some((p) => p.host !== null);
-  section.append(el('p', 'stat-label map-info-subhead', 'Bodies'));
-  if (system.stars.length > 1) {
-    section.append(el('p', 'muted', wide ? 'A wide system: each star has planets of its own.' : 'A close system: its planets circle all its stars together.'));
-  }
-  section.append(list);
+  section.append(el('p', 'stat-label map-info-subhead', 'Bodies'), list);
   return section;
 }
 
@@ -1922,7 +1987,6 @@ function plural(n: number, word: string): string {
 function systemInfo(map: GalaxyMap, index: number, planets: Planet[]): MenuContent {
   const system = map.systems[index];
   const moons = planets.reduce((sum, p) => sum + p.moons.length, 0);
-  const wide = planets.some((p) => p.host !== null);
   const facts: [string, string][] = [
     ['Stars', describeStars(system.stars)],
     ['Planets', `${planets.length} · ${plural(moons, 'moon')}`],
@@ -1933,7 +1997,6 @@ function systemInfo(map: GalaxyMap, index: number, planets: Planet[]): MenuConte
   return {
     eyebrow: index === map.home ? 'Star system · your capital' : 'Star system',
     title: system.name,
-    subtitle: system.stars.length > 1 ? (wide ? 'Wide: each star has planets of its own' : 'Close: its planets circle all its stars') : undefined,
     facts,
     colour: system.stars[0].exotic === 'black-hole' ? ACCRETION_COLOUR : system.stars[0].colour,
   };
