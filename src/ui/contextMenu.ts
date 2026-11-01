@@ -14,6 +14,8 @@ export interface MenuContent {
   /** Label and value pairs, shown as a compact table. */
   facts?: [label: string, value: string][];
   description?: string;
+  /** An outside link under the description, opened in a new tab. */
+  link?: { label: string; href: string };
   actions?: MenuAction[];
   /** A color dot beside the title: the body's own color. */
   colour?: string;
@@ -68,6 +70,13 @@ export function showContextMenu(x: number, y: number, content: MenuContent): voi
     menu.append(facts);
   }
   if (content.description) menu.append(el('p', 'context-menu-description', content.description));
+  if (content.link) {
+    const link = el('a', 'context-menu-link', content.link.label) as HTMLAnchorElement;
+    link.href = content.link.href;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    menu.append(link);
+  }
 
   const buttons: HTMLButtonElement[] = [];
   if (content.actions?.length) {

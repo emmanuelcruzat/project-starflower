@@ -341,12 +341,16 @@ export interface StarType {
   colour: string;
   /** Dwarfs and remnants that get their own look (see style.css). */
   exotic?: 'white-dwarf' | 'neutron' | 'black-hole';
+  /** A brown dwarf: never a system's primary star, only a companion. */
+  substellar?: boolean;
   /** What the right-click info calls it, if not just "Star". */
   eyebrow?: string;
   /** Surface temperature, for the right-click info. */
   temperature: string;
   /** A sentence or two for the right-click info. */
   description: string;
+  /** Its English Wikipedia article (the part after /wiki/), linked from the right-click info. */
+  wiki: string;
 }
 
 /**
@@ -355,7 +359,7 @@ export interface StarType {
  */
 export const STAR_TYPES: StarType[] = [
   {
-    name: 'Red giant', short: 'RG', weight: 4, radius: 6, colour: '#ff8a5c', eyebrow: 'Giant star', temperature: '3,000–5,000 K',
+    name: 'Red giant', wiki: 'Red_giant', short: 'RG', weight: 4, radius: 6, colour: '#ff8a5c', eyebrow: 'Giant star', temperature: '3,000–5,000 K',
     description: 'An old star swollen to a hundred times its former size as its core runs dry. Its inner worlds have long since been swallowed or scorched.',
   },
   // Supergiants and hypergiants come in blue, yellow and red. Each family
@@ -363,73 +367,83 @@ export const STAR_TYPES: StarType[] = [
   // a hypergiant, so a sector (some 590 stars) averages one or two
   // supergiants, and only about one sector in three has a hypergiant.
   {
-    name: 'Blue supergiant', short: 'BSG', weight: 0.1, radius: 6.8, colour: '#a9c1ff', eyebrow: 'Giant star', temperature: '10,000–50,000 K',
+    name: 'Blue supergiant', wiki: 'Blue_supergiant', short: 'BSG', weight: 0.1, radius: 6.8, colour: '#a9c1ff', eyebrow: 'Giant star', temperature: '10,000–50,000 K',
     description: 'A young, massive star burning so hot and fast it will be gone in a few million years. Its light floods the surrounding systems.',
   },
   {
-    name: 'Yellow supergiant', short: 'YSG', weight: 0.08, radius: 7, colour: '#ffe08a', eyebrow: 'Giant star', temperature: '4,000–7,500 K',
+    name: 'Yellow supergiant', wiki: 'Yellow_supergiant', short: 'YSG', weight: 0.08, radius: 7, colour: '#ffe08a', eyebrow: 'Giant star', temperature: '4,000–7,500 K',
     description: 'A giant caught mid-change, crossing from blue to red as it ages. Its brightness rises and falls in a slow, steady pulse.',
   },
   {
-    name: 'Red supergiant', short: 'RSG', weight: 0.12, radius: 7.4, colour: '#ff6f45', eyebrow: 'Giant star', temperature: '3,500–4,500 K',
+    name: 'Red supergiant', wiki: 'Red_supergiant', short: 'RSG', weight: 0.12, radius: 7.4, colour: '#ff6f45', eyebrow: 'Giant star', temperature: '3,500–4,500 K',
     description: 'A vast, bloated star that would fill the orbit of a gas giant, shedding its outer layers into space. It will end as a supernova.',
   },
   {
-    name: 'Blue hypergiant', short: 'BHG', weight: 0.025, radius: 8.2, colour: '#c8d8ff', eyebrow: 'Giant star', temperature: '10,000–35,000 K',
+    name: 'Blue hypergiant', wiki: 'Hypergiant#Blue_hypergiants', short: 'BHG', weight: 0.025, radius: 8.2, colour: '#c8d8ff', eyebrow: 'Giant star', temperature: '10,000–35,000 K',
     description: 'A star near the limit of how massive one can be, shining with millions of suns. Its own light blows a fierce wind off its surface.',
   },
   {
-    name: 'Yellow hypergiant', short: 'YHG', weight: 0.02, radius: 8.4, colour: '#fff0c8', eyebrow: 'Giant star', temperature: '4,000–8,000 K',
+    name: 'Yellow hypergiant', wiki: 'Yellow_hypergiant', short: 'YHG', weight: 0.02, radius: 8.4, colour: '#fff0c8', eyebrow: 'Giant star', temperature: '4,000–8,000 K',
     description: "Among the largest and brightest stars there are, a million times the Sun's light, so unstable it throws off whole shells of itself in great eruptions.",
   },
   {
-    name: 'Red hypergiant', short: 'RHG', weight: 0.025, radius: 8.6, colour: '#ff5a3c', eyebrow: 'Giant star', temperature: '3,500–4,000 K',
+    name: 'Red hypergiant', wiki: 'Hypergiant#Red_hypergiants', short: 'RHG', weight: 0.025, radius: 8.6, colour: '#ff5a3c', eyebrow: 'Giant star', temperature: '3,500–4,000 K',
     description: 'The largest stars known, wide enough to swallow a whole planetary system, wrapped in dust and gas from their own collapsing outer layers.',
   },
   {
-    name: 'Class O', short: 'O', weight: 2, radius: 5.5, colour: '#9db4ff', temperature: 'Over 30,000 K',
+    name: 'Class O', wiki: 'O-type_main-sequence_star', short: 'O', weight: 2, radius: 5.5, colour: '#9db4ff', temperature: 'Over 30,000 K',
     description: 'A blue giant: rare, blindingly bright and short-lived. Its radiation scours any world that strays close.',
   },
   {
-    name: 'Class B', short: 'B', weight: 5, radius: 5, colour: '#b3c6ff', temperature: '10,000–30,000 K',
+    name: 'Class B', wiki: 'B-type_main-sequence_star', short: 'B', weight: 5, radius: 5, colour: '#b3c6ff', temperature: '10,000–30,000 K',
     description: 'A hot blue-white star, hundreds of times brighter than the Sun. It burns through its fuel in a few hundred million years.',
   },
   {
-    name: 'Class A', short: 'A', weight: 8, radius: 4.6, colour: '#dbe4ff', temperature: '7,500–10,000 K',
+    name: 'Class A', wiki: 'A-type_main-sequence_star', short: 'A', weight: 8, radius: 4.6, colour: '#dbe4ff', temperature: '7,500–10,000 K',
     description: 'A bright white star, spinning fast. Its planets have to keep their distance to stay cool.',
   },
   {
-    name: 'Class F', short: 'F', weight: 12, radius: 4.3, colour: '#fbf8ff', temperature: '6,000–7,500 K',
+    name: 'Class F', wiki: 'F-type_main-sequence_star', short: 'F', weight: 12, radius: 4.3, colour: '#fbf8ff', temperature: '6,000–7,500 K',
     description: 'A yellow-white star, a little hotter and brighter than the Sun, with a generous zone where water stays liquid.',
   },
   {
-    name: 'Class G', short: 'G', weight: 18, radius: 4, colour: '#fff1c4', temperature: '5,200–6,000 K',
+    name: 'Class G', wiki: 'G-type_main-sequence_star', short: 'G', weight: 18, radius: 4, colour: '#fff1c4', temperature: '5,200–6,000 K',
     description: 'A yellow dwarf like the Sun: steady, long-lived and kind to life.',
   },
   {
-    name: 'Class K', short: 'K', weight: 25, radius: 3.6, colour: '#ffcf8f', temperature: '3,700–5,200 K',
+    name: 'Class K', wiki: 'K-type_main-sequence_star', short: 'K', weight: 25, radius: 3.6, colour: '#ffcf8f', temperature: '3,700–5,200 K',
     description: 'An orange dwarf, cooler and dimmer than the Sun, and stable for tens of billions of years.',
   },
   {
-    name: 'Class M', short: 'M', weight: 30, radius: 3.2, colour: '#ff9b6b', temperature: '2,400–3,700 K',
+    name: 'Class M', wiki: 'Red_dwarf', short: 'M', weight: 30, radius: 3.2, colour: '#ff9b6b', temperature: '2,400–3,700 K',
     description: 'A red dwarf, the most common star in the galaxy. Dim and nearly ageless, but given to violent flares.',
   },
   // Brown dwarfs, white dwarfs and neutron stars are smaller in reality than
   // the smallest stars; they're drawn at that size so they still beat any planet.
+  // Brown dwarfs come in three classes, L to Y, warmest to coolest, and are
+  // only ever companions, never a system's primary star.
   {
-    name: 'Brown dwarf', short: 'BD', weight: 8, radius: 3.2, colour: '#b4566b', eyebrow: 'Substellar object', temperature: '300–2,400 K',
-    description: 'Too small to fuse hydrogen, too big to be a planet: a failed star glowing a dull magenta with the heat left over from its birth.',
+    name: 'Class L', wiki: 'L_dwarf', short: 'L', weight: 3.5, radius: 3.2, colour: '#c4485a', substellar: true, eyebrow: 'Brown dwarf', temperature: '1,300–2,400 K',
+    description: 'The warmest kind of brown dwarf, too small to fuse hydrogen for long. It glows a deep red-magenta through clouds of hot dust and molten iron.',
   },
   {
-    name: 'White dwarf', short: 'WD', weight: 6, radius: 3.2, colour: '#f2f6ff', exotic: 'white-dwarf', eyebrow: 'Stellar remnant', temperature: '8,000–40,000 K',
+    name: 'Class T', wiki: 'T_dwarf', short: 'T', weight: 3, radius: 3.2, colour: '#a2477f', substellar: true, eyebrow: 'Brown dwarf', temperature: '550–1,300 K',
+    description: 'A cooler brown dwarf, its dust clouds sunk out of sight and methane in its air. A failed star glowing a dull magenta with the heat left from its birth.',
+  },
+  {
+    name: 'Class Y', wiki: 'Y_dwarf', short: 'Y', weight: 1.5, radius: 3.2, colour: '#6e3f86', substellar: true, eyebrow: 'Brown dwarf', temperature: 'Under 550 K',
+    description: 'The coldest brown dwarf, barely warmer than an oven, with water clouds in its sky. More a giant planet adrift than a star, it shines faintly in the infrared.',
+  },
+  {
+    name: 'White dwarf', wiki: 'White_dwarf', short: 'WD', weight: 6, radius: 3.2, colour: '#f2f6ff', exotic: 'white-dwarf', eyebrow: 'Stellar remnant', temperature: '8,000–40,000 K',
     description: 'The bare core of a star like the Sun, packed into a ball the size of a planet. It has no fuel left and will cool for billions of years.',
   },
   {
-    name: 'Neutron star', short: 'NS', weight: 2, radius: 3.2, colour: '#eaf4ff', exotic: 'neutron', eyebrow: 'Stellar remnant', temperature: 'About 600,000 K',
+    name: 'Neutron star', wiki: 'Neutron_star', short: 'NS', weight: 2, radius: 3.2, colour: '#eaf4ff', exotic: 'neutron', eyebrow: 'Stellar remnant', temperature: 'About 600,000 K',
     description: 'The collapsed core of a dead giant: a city-sized ball of neutrons, spinning many times a second.',
   },
   {
-    name: 'Black hole', short: 'BH', weight: 1, radius: 4.2, colour: '#05060a', exotic: 'black-hole', eyebrow: 'Stellar remnant', temperature: 'None it gives off',
+    name: 'Black hole', wiki: 'Stellar_black_hole', short: 'BH', weight: 1, radius: 4.2, colour: '#05060a', exotic: 'black-hole', eyebrow: 'Stellar remnant', temperature: 'None it gives off',
     description: 'Collapsed so far that not even light escapes. Matter spiraling in glows white-hot in its accretion disc.',
   },
 ];
@@ -443,14 +457,23 @@ const MULTIPLICITY = [
 ];
 export const MULTIPLICITY_NAMES = ['Single', 'Binary', 'Trinary', 'Quaternary'];
 
+/** The types a system's primary star can be: anything but a brown dwarf. */
+const PRIMARY_TYPES = STAR_TYPES.filter((type) => !type.substellar);
+
 /**
  * A system's stars, biggest first. A black hole always comes first (it
- * dominates whatever it's paired with); the rest go by size.
+ * dominates whatever it's paired with); brown dwarfs always come last,
+ * warmest first; the rest go by size. The first star is always a true star.
  */
 function systemStars(random: Random): StarType[] {
   const count = weighted(MULTIPLICITY, random).stars;
-  const stars = Array.from({ length: count }, () => weighted(STAR_TYPES, random));
-  const rank = (star: StarType) => (star.exotic === 'black-hole' ? Infinity : star.radius);
+  const stars = [weighted(PRIMARY_TYPES, random)];
+  for (let i = 1; i < count; i++) stars.push(weighted(STAR_TYPES, random));
+  const rank = (star: StarType) => {
+    if (star.exotic === 'black-hole') return Infinity;
+    if (star.substellar) return -STAR_TYPES.indexOf(star);
+    return star.radius;
+  };
   return stars.sort((a, b) => rank(b) - rank(a));
 }
 

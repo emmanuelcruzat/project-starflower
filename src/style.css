@@ -2498,6 +2498,19 @@ button.link-button.map-system-link:hover {
   line-height: 1.45;
 }
 
+.context-menu-link {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 0.9em;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.context-menu-link:hover,
+.context-menu-link:focus-visible {
+  text-decoration: underline;
+}
+
 .context-menu-actions {
   display: flex;
   flex-direction: column;

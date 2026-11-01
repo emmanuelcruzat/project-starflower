@@ -2127,6 +2127,7 @@ function starInfo(map: GalaxyMap, index: number, k: number): MenuContent {
     subtitle: star.name,
     facts,
     description: star.description,
+    link: { label: 'Read more on Wikipedia ↗', href: `https://en.wikipedia.org/wiki/${star.wiki}` },
     colour: star.exotic === 'black-hole' ? ACCRETION_COLOUR : star.colour,
   };
 }
