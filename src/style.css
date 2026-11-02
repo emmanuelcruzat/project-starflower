@@ -1608,21 +1608,26 @@ body.game-mode .dev-banner {
   stroke-opacity: 0.6;
 }
 
-.starmap .planet-ring {
+/* Planets are drawn in bodies.ts, shaded and detailed by type. A thin dark
+   edge sets them off from their orbits. */
+.starmap .planet-edge {
   fill: none;
-  stroke-width: 1.2;
-  stroke-opacity: 0.7;
-}
-
-/* Planets are flat discs of their own color, no shading, with a thin dark
-   edge to set them off from their orbits. */
-.starmap .planet-disc {
   stroke: rgba(0, 0, 0, 0.45);
-  stroke-width: 0.4;
+  stroke-width: 0.25;
 }
 
-.system-map .planet-disc {
-  stroke-width: 1.5;
+.system-map .planet-edge {
+  stroke-width: 0.8;
+}
+
+.starmap .planet-air,
+.starmap .planet-ring {
+  pointer-events: none;
+}
+
+/* Lava glows. */
+.system-map .lava {
+  filter: drop-shadow(0 0 1.5px #ff7a3c);
 }
 
 .starmap .planet,
@@ -1866,11 +1871,11 @@ button.link-button.map-system-link:hover {
   fill: transparent;
 }
 
-/* Each star's color comes from its spectral class (--star, set in
-   galaxyMap.ts). Scaling from the star's own center makes it "swell" in
-   place on hover; the glow keeps its color. */
+/* A star (mapStar in bodies.ts) is a glow and a bright core, colored by
+   its spectral class; --star carries the color for the
+   hover glow. Scaling from the star's own center makes it "swell" in
+   place on hover. */
 .starmap .star {
-  fill: var(--star, #cfdcee);
   transform-box: fill-box;
   transform-origin: center;
   transition: transform 0.15s, filter 0.15s;
@@ -1878,31 +1883,21 @@ button.link-button.map-system-link:hover {
 
 .starmap .system:hover .star,
 .starmap .system:focus-visible .star {
-  transform: scale(1.7);
-  filter: drop-shadow(0 0 3px var(--star));
+  transform: scale(1.5);
+  filter: drop-shadow(0 0 2px var(--star));
 }
 
-/* Stellar remnants. These come after the hover and rack rules on purpose,
-   so their glows win at the same specificity. A black hole is a dark disc
-   ringed by its accretion disc (keep the color in step with
-   ACCRETION_COLOUR in galaxyMap.ts); a neutron star is a tiny, fierce
-   blue-white point with a wide halo. */
-.starmap .system .star.black-hole,
-.starmap .system-preview .star.black-hole {
-  stroke: #ffb36b;
-  stroke-width: 1.1;
-  filter: drop-shadow(0 0 2px #ffb36b);
+/* Stellar remnants (mapStar in bodies.ts). A black hole's accretion disc
+   glows (keep the color in step with ACCRETION_COLOUR in bodies.ts); a
+   neutron star's core is a tiny, fierce blue-white point. */
+.starmap .system .star.black-hole .accretion-disc,
+.starmap .system-preview .star.black-hole .accretion-disc {
+  filter: drop-shadow(0 0 1px #ffb36b);
 }
 
-.starmap .system .star.neutron,
-.starmap .system-preview .star.neutron {
-  filter: drop-shadow(0 0 1px #ffffff) drop-shadow(0 0 3px #8fc8ff);
-}
-
-/* A white dwarf is a hard, bright white point with only a tight halo. */
-.starmap .system .star.white-dwarf,
-.starmap .system-preview .star.white-dwarf {
-  filter: drop-shadow(0 0 0.6px #ffffff) drop-shadow(0 0 1.5px #dce8ff);
+.starmap .system .star.neutron .star-core,
+.starmap .system-preview .star.neutron .star-core {
+  filter: drop-shadow(0 0 1px #ffffff) drop-shadow(0 0 2px #8fc8ff);
 }
 
 /* Names stay hidden until hovered, so hundreds of labels don't clutter the map. */
@@ -2309,10 +2304,14 @@ button.link-button.map-system-link:hover {
   filter: drop-shadow(0 0 6px var(--star));
 }
 
-.system-map .star.black-hole {
-  stroke: #ffb36b;
-  stroke-width: 3;
-  filter: drop-shadow(0 0 8px #ffb36b);
+/* Brown dwarfs glow dully: no bright corona round them. */
+.system-map .diagram-star.substellar {
+  filter: drop-shadow(0 0 3px var(--star));
+}
+
+.system-map .accretion-disc,
+.system-map .photon-ring {
+  filter: drop-shadow(0 0 4px #ffb36b);
 }
 
 .system-map .star.neutron {
@@ -2339,10 +2338,6 @@ button.link-button.map-system-link:hover {
   transform: scale(1.15);
 }
 
-.system-map .planet-ring {
-  stroke-width: 2;
-}
-
 /* Each moon's ring turns around its planet (the origin is set per moon). */
 .system-map .moon-spin {
   transform-box: view-box;
@@ -2363,32 +2358,41 @@ button.link-button.map-system-link:hover {
   }
 }
 
+/* The diagram's names grow as you zoom in, but only up to their normal
+   size: past a zoom of 1 (--zoom, set by MapControls in galaxyMap.ts)
+   their sizes are divided by the zoom, so they stay that size on screen
+   instead of ballooning. The gaps between a body and its labels are in
+   ems (galaxyMap.ts), so they keep in step with the text. */
+.system-map {
+  --label-scale: calc(1 / max(var(--zoom, 1), 1));
+}
+
 .system-map .diagram-label,
 .system-map .diagram-sublabel {
   font-family: var(--mono);
   paint-order: stroke;
   stroke: #04060a;
-  stroke-width: 4px;
+  stroke-width: calc(4px * var(--label-scale));
   stroke-opacity: 0.8;
   pointer-events: none;
   user-select: none;
 }
 
 .system-map .diagram-label {
-  font-size: 13px;
+  font-size: calc(13px * var(--label-scale));
   letter-spacing: 0.06em;
   fill: var(--text);
 }
 
 .system-map .diagram-star-label {
-  font-size: 15px;
+  font-size: calc(15px * var(--label-scale));
   letter-spacing: 0.12em;
   text-transform: uppercase;
   fill: var(--accent-2);
 }
 
 .system-map .diagram-sublabel {
-  font-size: 10px;
+  font-size: calc(10px * var(--label-scale));
   letter-spacing: 0.08em;
   text-transform: uppercase;
   fill: var(--muted);
@@ -2420,12 +2424,12 @@ button.link-button.map-system-link:hover {
 
 .system-map .diagram-lane-name {
   font-family: var(--mono);
-  font-size: 13px;
+  font-size: calc(13px * var(--label-scale));
   letter-spacing: 0.06em;
   fill: var(--muted);
   paint-order: stroke;
   stroke: #04060a;
-  stroke-width: 4px;
+  stroke-width: calc(4px * var(--label-scale));
   stroke-opacity: 0.8;
   transition: fill 0.15s;
 }

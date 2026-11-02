@@ -3,6 +3,7 @@ import type { Nation } from '../types';
 import { el } from './dom';
 import { playChirp, playWhoosh } from './sound';
 import { closeContextMenu, showContextMenu, type MenuContent } from './contextMenu';
+import { ACCRETION_COLOUR, diagramStar, lightFrom, mapStar, moonBody, Paints, planetBody, rockPath } from './map/bodies';
 import { borderPath, fillPath, pointInRing, ringsPath, territoryCells, territoryRings, type Point } from './map/borders';
 import {
   BELT_TYPE, beltName, describeStars, generateMap, hostOrbits, MAP_HEIGHT, MAP_WIDTH, planetNames, sectorShape, starLetter, systemBelt, systemPlanets,
@@ -98,8 +99,6 @@ const NAME_SEARCH = { radius: 50, step: 10, pull: 0.25 };
  * all. Keep in step with .home .system-label in style.css.
  */
 const HOME_TAG = { charWidth: 4.7, ascent: 7, height: 8.7, padX: 4, padY: 2 };
-/** The glow of a black hole's accretion disc. Keep in step with .star.black-hole in style.css. */
-const ACCRETION_COLOUR = '#ffb36b';
 
 /**
  * Where the map is looking: the map point at the center of the viewport, and
@@ -796,10 +795,12 @@ function systemPreview(map: GalaxyMap, index: number, planets: Planet[], belt: B
   const orbitOf = (core: number, j: number) => core + PREVIEW.firstGap + j * PREVIEW.step;
   const glow = (star: StarType) => (star.exotic === 'black-hole' ? ACCRETION_COLOUR : star.colour);
   const group = svg('g', { class: 'system-preview' });
+  const defs = svg('defs', {});
+  const paints = new Paints(defs, 'preview');
   const back = svg('g', {});
   const rings = svg('g', { class: 'preview-rings' });
   const bodies = svg('g', {});
-  group.append(back, rings, bodies);
+  group.append(defs, back, rings, bodies);
 
   // Where each star sits, and which planets circle it (null: all of them).
   const [primary, ...companions] = system.stars;
@@ -868,13 +869,8 @@ function systemPreview(map: GalaxyMap, index: number, planets: Planet[], belt: B
       body.append(title);
       // A planet with moons gets a faint halo ring, a hint of what's round it.
       if (moons > 0) body.append(svg('circle', { cx: x.toFixed(1), cy: y.toFixed(1), r: (r + 1.4).toFixed(2), class: 'preview-moons', stroke: planet.type.colour }));
-      if (planet.type.ringed) {
-        body.append(svg('ellipse', {
-          cx: x.toFixed(1), cy: y.toFixed(1), rx: (r * 1.7).toFixed(2), ry: (r * 0.5).toFixed(2), class: 'planet-ring', stroke: planet.type.colour,
-          transform: `rotate(-18 ${x.toFixed(1)} ${y.toFixed(1)})`,
-        }));
-      }
-      body.append(svg('circle', { cx: x.toFixed(1), cy: y.toFixed(1), r: r.toFixed(2), fill: planet.type.colour, class: 'planet-disc' }));
+      // The same surface stream as the diagram, so the planet looks the same there.
+      body.append(planetBody(paints, planet.type, x, y, r, `planet-${i}`, seededRandom(`${seed}/surface/${index}/${i}`), lightFrom(x, y, host.x, host.y)));
       bodies.append(body);
     });
   });
@@ -883,7 +879,7 @@ function systemPreview(map: GalaxyMap, index: number, planets: Planet[], belt: B
   system.stars.forEach((star, k) => {
     if (k === 0) return;
     const at = hosts[k];
-    const node = starCircle(star, at.x, at.y, radius(star), 'preview-star');
+    const node = mapStar(paints, star, at.x, at.y, radius(star), 'preview-star');
     node.setAttribute('data-star', String(k));
     const title = svg('title', {});
     title.textContent = `${system.name} ${starLetter(k)} · ${star.name}`;
@@ -991,7 +987,8 @@ class MapControls {
     // Tabbing to a system that's off screen brings it into view.
     svg.addEventListener('focusin', (event) => {
       const target = event.target as Element;
-      const star = target.classList.contains('system') ? target.querySelector('.star') : null;
+      // A system's hit circle sits on its star.
+      const star = target.classList.contains('system') ? target.querySelector('.hit') : null;
       if (!star) return;
       const x = Number(star.getAttribute('cx'));
       const y = Number(star.getAttribute('cy'));
@@ -1224,6 +1221,7 @@ function drawMap(map: GalaxyMap, seed: string, exits: SectorExit[]): SVGSVGEleme
   const claimed = owners.flatMap((owner, i) => (owner === null ? [] : [i]));
   const cells = territoryCells(systems, claimed, TERRITORY_RADIUS);
   const defs = svg('defs', {});
+  const paints = new Paints(defs, 'map');
   const territories = svg('g', { class: 'territories' });
 
   const names = svg('g', { class: 'territory-names', 'aria-hidden': 'true' });
@@ -1288,9 +1286,9 @@ function drawMap(map: GalaxyMap, seed: string, exits: SectorExit[]): SVGSVGEleme
     companions.forEach((companion, k) => {
       const { dx, dy, r } = companionOffset(primary, companion, k);
       bottoms.push(dy + r);
-      group.append(starCircle(companion, system.x + dx, system.y + dy, r, 'companion'));
+      group.append(mapStar(paints, companion, system.x + dx, system.y + dy, r, 'companion'));
     });
-    group.append(starCircle(primary, system.x, system.y, primary.radius));
+    group.append(mapStar(paints, primary, system.x, system.y, primary.radius));
 
     // The name sits centered under the stars.
     const labelY = system.y + Math.max(...bottoms) + 12;
@@ -1348,16 +1346,6 @@ function clearSpot(map: GalaxyMap, members: number[]): Point {
     }
   }
   return best;
-}
-
-/**
- * One star. The color goes in a CSS variable rather than a fill attribute,
- * because CSS rules (like hover) would otherwise override it. Neutron stars
- * and black holes get an extra class for their own look.
- */
-function starCircle(star: StarType, x: number, y: number, r: number, extra = ''): SVGCircleElement {
-  const classes = ['star', star.exotic ?? '', extra].filter(Boolean).join(' ');
-  return svg('circle', { cx: x.toFixed(1), cy: y.toFixed(1), r: r.toFixed(2), class: classes, style: `--star: ${star.colour}` });
 }
 
 /** Where a companion star sits beside its primary on the map: up right, down left, down right. */
@@ -1729,13 +1717,76 @@ function regionPanel(galaxy: Galaxy, region: GalacticRegion, map: GalaxyMap, ind
 // --- System diagram ---
 
 /**
- * Laying out a system's diagram, in diagram units. Stars and planets are
- * drawn this many times their size on the star map. Planet orbits fill the
- * space from `firstGap` past the stars out to `outerOrbit`, evenly spaced:
- * the diagram shows order, not real distances. Moons circle their planet
+ * Sizes in a system's diagram, in diagram units: true to life, but
+ * squeezed. A body `size` Suns across is drawn `sun * size ** power`
+ * across, so a hypergiant still dwarfs a red dwarf, a brown dwarf is the
+ * size of a gas giant and a white dwarf no bigger than an Earth, while the
+ * planets stay big enough to see. Neutron stars and black holes are far
+ * too small for any scale, so they're drawn at `minStar` and `minBlackHole`
+ * (whose accretion disc spreads well past that). Moons circle their planet
  * `moonGap` past its edge, each `moonStep` further out.
  */
-const DIAGRAM = { starScale: 7, planetScale: 3.2, firstGap: 80, outerOrbit: 480, moonGap: 9, moonStep: 7, moonRadius: 2.4 };
+const DIAGRAM = { sun: 24, power: 0.28, minStar: 5, minBlackHole: 8, moonGap: 9, moonStep: 7, moonRadius: 2.4 };
+/** Earth's radius, in Suns. */
+const EARTH_IN_SUNS = 0.00917;
+/**
+ * How planets' orbits are spaced, in diagram units. The first lies
+ * `firstGap` past the stars, scaled up for bigger, brighter stars (whose
+ * worlds orbit further out) and down for dim ones. Each orbit after is
+ * `ratio` times further out than the last, as real orbits roughly are, but
+ * never so close that its moons and name touch its neighbor's. If that
+ * runs past `outer` (`wideOuter` for each star of a wide system), the gaps
+ * close up to fit.
+ */
+const ORBITS = { firstGap: 70, ratio: 1.7, outer: 560, wideOuter: 330, clearance: 12 };
+
+/** A star's size in the diagram. */
+function diagramStarSize(star: StarType): number {
+  const floor = star.exotic === 'black-hole' ? DIAGRAM.minBlackHole : DIAGRAM.minStar;
+  return Math.max(floor, DIAGRAM.sun * star.size ** DIAGRAM.power);
+}
+
+/** A planet's size in the diagram, on the same scale as its star. */
+function diagramPlanetSize(planet: Planet): number {
+  return DIAGRAM.sun * (planet.type.size * EARTH_IN_SUNS) ** DIAGRAM.power;
+}
+
+/**
+ * The radius of each orbit, innermost first, round stars reaching `core`
+ * from their middle, the biggest of them `starSize` across. `reach` is how
+ * far each orbit's body (moons and all) spreads either side of it.
+ */
+function orbitRadii(reach: number[], core: number, starSize: number, outer: number): number[] {
+  if (reach.length === 0) return [];
+  // Brightness grows with size, and with it how far out worlds can stay cool.
+  const first = core + ORBITS.firstGap * Math.sqrt(starSize / DIAGRAM.sun);
+  const spaced = (ratio: number) => {
+    const orbits = [first];
+    for (let j = 1; j < reach.length; j++) {
+      const previous = orbits[j - 1];
+      orbits.push(Math.max(previous * ratio, previous + reach[j - 1] + reach[j] + ORBITS.clearance));
+    }
+    return orbits;
+  };
+  // Round a giant, the first orbit alone may be most of the way out: leave
+  // the rest at least a little room each.
+  const end = Math.max(outer, first + 50 * (reach.length - 1));
+  const orbits = spaced(ORBITS.ratio);
+  if (orbits[orbits.length - 1] <= end) return orbits;
+  // Too wide: find the gentlest ratio that fits, so the gaps still widen outwards.
+  let [low, high] = [1, ORBITS.ratio];
+  for (let n = 0; n < 20; n++) {
+    const mid = (low + high) / 2;
+    if (spaced(mid)[reach.length - 1] <= end) low = mid;
+    else high = mid;
+  }
+  const fitted = spaced(low);
+  const last = fitted[fitted.length - 1];
+  if (last <= end) return fitted;
+  // Even evenly spaced, their moons need more room than there is: squeeze the gaps.
+  const squeeze = (end - first) / (last - first);
+  return fitted.map((orbit) => first + (orbit - first) * squeeze);
+}
 /**
  * Hyperlanes leaving the diagram, in diagram units past the outermost
  * orbit: where each starts and ends, and where the name of the system it
@@ -1756,14 +1807,18 @@ function systemNear(map: GalaxyMap, point: Point, within: number): number | null
   return best;
 }
 
-/**
- * In a wide system, each star's own orbits, in diagram units: the first
- * this far past the star's edge, the rest this far apart. Stars sit `gap`
- * apart, edge of orbits to edge of orbits.
- */
-const WIDE = { firstGap: 62, step: 56, gap: 60 };
-/** Room under a planet for its name and type, in diagram units. */
+/** In a wide system, how far apart the stars sit, edge of orbits to edge of orbits, in diagram units. */
+const WIDE = { gap: 60 };
+/** Room under a planet for its name and type, in diagram units, at the zoom a diagram opens at. */
 const LABEL_ROOM = 34;
+/** How far below a planet's moons (or a belt's rocks) its labels start, in diagram units. */
+const LABEL_GAP = 4;
+/**
+ * Where a body's name and type sit below LABEL_GAP, in ems of their own
+ * text (the type's text is smaller, so it takes more of its own ems), so
+ * the lines keep apart however big zooming makes them.
+ */
+const LABEL_LINES = { name: '1em', kind: '2.7em' };
 /** How far an asteroid belt's rocks scatter either side of its orbit, in diagram units. */
 const BELT_BAND = 14;
 
@@ -1785,12 +1840,13 @@ function systemDiagram(
   const centre = SYSTEM_SIZE / 2;
   const names = planetNames(system, planets);
   const defs = svg('defs', {});
+  const paints = new Paints(defs, 'diagram');
   const back = svg('g', { class: 'diagram-orbits' });
   const front = svg('g', { class: 'diagram-bodies' });
   const random = seededRandom(`${seed}/orbits/${index}`);
-  const radius = (star: StarType) => star.radius * DIAGRAM.starScale;
-  /** How far a planet's moons and label reach past its orbit. */
-  const planetReach = (planet: Planet) => planet.type.radius * DIAGRAM.planetScale
+  const radius = diagramStarSize;
+  /** How far a planet's moons reach past its orbit. */
+  const planetReach = (planet: Planet) => diagramPlanetSize(planet)
     + (planet.moons.length > 0 ? DIAGRAM.moonGap + (planet.moons.length - 1) * DIAGRAM.moonStep : 0);
 
   const drawStar = (star: StarType, k: number, x: number, y: number) => {
@@ -1803,8 +1859,9 @@ function systemDiagram(
       svg('stop', { offset: 1, 'stop-color': star.colour, 'stop-opacity': 0 }),
     );
     defs.append(halo);
-    back.append(svg('circle', { cx: x.toFixed(1), cy: y.toFixed(1), r: (r * 3.2).toFixed(1), fill: `url(#${haloId})`, class: ['diagram-halo', star.exotic ?? ''].join(' ').trim() }));
-    const node = starCircle(star, x, y, r, 'diagram-star');
+    // Wide round small stars, but capped, or a giant's would swamp its whole system.
+    back.append(svg('circle', { cx: x.toFixed(1), cy: y.toFixed(1), r: (r + Math.min(r * 2.2, 90)).toFixed(1), fill: `url(#${haloId})`, class: ['diagram-halo', star.exotic ?? ''].join(' ').trim() }));
+    const node = diagramStar(paints, star, x, y, r, `star-${k}`, seededRandom(`${seed}/surface/${index}/star-${k}`));
     node.setAttribute('data-star', String(k));
     const title = svg('title', {});
     title.textContent = `${system.name}${system.stars.length > 1 ? ` ${starLetter(k)}` : ''} · ${star.name}`;
@@ -1820,7 +1877,7 @@ function systemDiagram(
     const angle = random() * Math.PI * 2;
     const x = cx + Math.cos(angle) * orbit;
     const y = cy + Math.sin(angle) * orbit;
-    const r = type.radius * DIAGRAM.planetScale;
+    const r = diagramPlanetSize(planet);
     const name = names[k];
     const group = svg('g', { class: 'diagram-planet' });
 
@@ -1834,7 +1891,7 @@ function systemDiagram(
         class: 'moon-spin',
         style: `transform-origin: ${x.toFixed(1)}px ${y.toFixed(1)}px; animation-duration: ${period}s; animation-delay: -${(random() * period).toFixed(1)}s`,
       });
-      const node = svg('circle', { cx: (x + ring).toFixed(1), cy: y.toFixed(1), r: DIAGRAM.moonRadius, fill: moon.colour, class: 'moon' });
+      const node = moonBody(paints, moon, x + ring, y, DIAGRAM.moonRadius);
       const title = svg('title', {});
       // Moons are lettered outwards from their planet: a, b, c...
       title.textContent = `${name}-${String.fromCharCode(97 + m)} · ${moon.name}`;
@@ -1848,18 +1905,17 @@ function systemDiagram(
     title.textContent = `${name} · ${type.name}${planet.moons.length > 0 ? ` · ${planet.moons.length} moon${planet.moons.length === 1 ? '' : 's'}` : ''}`;
     body.append(title);
     const px = x.toFixed(1);
-    const py = y.toFixed(1);
-    if (type.ringed) {
-      body.append(svg('ellipse', { cx: px, cy: py, rx: (r * 1.7).toFixed(1), ry: (r * 0.5).toFixed(1), class: 'planet-ring', stroke: type.colour, transform: `rotate(-18 ${px} ${py})` }));
-    }
-    body.append(svg('circle', { cx: px, cy: py, r: r.toFixed(1), fill: type.colour, class: 'planet-disc' }));
+    // Lit from the stars it circles. Its own surface stream, shared with the miniature.
+    body.append(planetBody(paints, type, x, y, r, `planet-${k}`, seededRandom(`${seed}/surface/${index}/${k}`), lightFrom(x, y, cx, cy)));
     group.append(body);
 
-    // Name and type under the planet, clear of its moons.
-    const below = y + planetReach(planet) + 16;
-    const label = svg('text', { x: px, y: below.toFixed(1), class: 'diagram-label', 'text-anchor': 'middle' });
+    // Name and type under the planet, clear of its moons. Both hang from
+    // just below the moons by a gap in ems, which grows with the text as
+    // zooming out enlarges it (see .system-map labels in style.css).
+    const below = y + planetReach(planet) + LABEL_GAP;
+    const label = svg('text', { x: px, y: below.toFixed(1), dy: LABEL_LINES.name, class: 'diagram-label', 'text-anchor': 'middle' });
     label.textContent = name;
-    const kind = svg('text', { x: px, y: (below + 14).toFixed(1), class: 'diagram-sublabel', 'text-anchor': 'middle' });
+    const kind = svg('text', { x: px, y: below.toFixed(1), dy: LABEL_LINES.kind, class: 'diagram-sublabel', 'text-anchor': 'middle' });
     kind.textContent = type.name;
     group.append(label, kind);
     front.append(group);
@@ -1886,12 +1942,13 @@ function systemDiagram(
       const x = cx + Math.cos(angle) * (orbit + spread);
       const y = cy + Math.sin(angle) * (orbit + spread);
       const shade = 0.55 + rocks() * 0.45;
-      group.append(svg('circle', { cx: x.toFixed(1), cy: y.toFixed(1), r: (0.7 + rocks() * 1.5).toFixed(2), fill: BELT_TYPE.colour, 'fill-opacity': shade.toFixed(2), class: 'belt-rock' }));
+      const colour = rocks() < 0.3 ? '#b5a48c' : BELT_TYPE.colour;
+      group.append(svg('path', { d: rockPath(x, y, 0.8 + rocks() * 1.7, rocks), fill: colour, 'fill-opacity': shade.toFixed(2), class: 'belt-rock' }));
     }
-    const below = cy + orbit + BELT_BAND + 16;
-    const label = svg('text', { x: cx.toFixed(1), y: below.toFixed(1), class: 'diagram-label', 'text-anchor': 'middle' });
+    const below = cy + orbit + BELT_BAND + LABEL_GAP;
+    const label = svg('text', { x: cx.toFixed(1), y: below.toFixed(1), dy: LABEL_LINES.name, class: 'diagram-label', 'text-anchor': 'middle' });
     label.textContent = name;
-    const kind = svg('text', { x: cx.toFixed(1), y: (below + 14).toFixed(1), class: 'diagram-sublabel', 'text-anchor': 'middle' });
+    const kind = svg('text', { x: cx.toFixed(1), y: below.toFixed(1), dy: LABEL_LINES.kind, class: 'diagram-sublabel', 'text-anchor': 'middle' });
     kind.textContent = BELT_TYPE.name;
     group.append(label, kind);
     front.prepend(group);
@@ -1911,7 +1968,7 @@ function systemDiagram(
   const wide = planets.some((p) => p.host !== null);
   if (!wide) {
     // Close: the primary in the middle, companions spaced around it, and
-    // every planet circling the lot on evenly spaced orbits.
+    // every planet circling the lot, each orbit wider apart than the last.
     const [primary, ...companions] = system.stars;
     const stars = [{ x: centre, y: centre }];
     companions.forEach((star, k) => {
@@ -1926,19 +1983,17 @@ function systemDiagram(
     system.stars.forEach((star, k) => drawStar(star, k, stars[k].x, stars[k].y));
 
     const orbits = hostOrbits(planets, belt, null);
-    const first = starReach + DIAGRAM.firstGap;
-    const step = orbits.length > 1 ? (DIAGRAM.outerOrbit - first) / (orbits.length - 1) : 0;
-    const orbitOf = (j: number) => (orbits.length === 1 ? first + 60 : first + step * j);
-    orbits.forEach((item, j) => (item === 'belt' ? drawBelt(centre, centre, orbitOf(j)) : drawPlanet(item, centre, centre, orbitOf(j))));
+    const radii = orbitRadii(orbits.map(orbitReach), starReach, radius(primary), ORBITS.outer);
+    orbits.forEach((item, j) => (item === 'belt' ? drawBelt(centre, centre, radii[j]) : drawPlanet(item, centre, centre, radii[j])));
     starLabel(system.name, centre, centre - starReach - 16);
-    const outer = orbits.length === 0 ? starReach : orbitOf(orbits.length - 1) + 20;
+    const outer = orbits.length === 0 ? starReach : radii[orbits.length - 1] + orbitReach(orbits[orbits.length - 1]) + 20;
     reach = { x: outer, y: outer };
   } else {
     // Wide: each star with its own planets, side by side, in letter order.
     // Each star's orbits are sized to its planets, not stretched to fill.
     const groups = system.stars.map((star, k) => {
       const own = hostOrbits(planets, belt, k);
-      const orbits = own.map((_, j) => radius(star) + WIDE.firstGap + j * WIDE.step);
+      const orbits = orbitRadii(own.map(orbitReach), radius(star), radius(star), ORBITS.wideOuter);
       const last = own.length > 0 ? orbits[orbits.length - 1] + orbitReach(own[own.length - 1]) : radius(star);
       return { star, own, orbits, extent: last + LABEL_ROOM };
     });
@@ -1988,7 +2043,8 @@ function systemDiagram(
     name.textContent = label;
     group.append(name);
     if (sublabel) {
-      const where = svg('text', { x: place.x, y: (Number(place.y) + 14).toFixed(1), class: 'diagram-sublabel', 'text-anchor': anchor, 'dominant-baseline': 'central' });
+      // A line below the name, in its own ems so it moves out as the text grows.
+      const where = svg('text', { x: place.x, y: place.y, dy: '1.4em', class: 'diagram-sublabel', 'text-anchor': anchor, 'dominant-baseline': 'central' });
       where.textContent = sublabel;
       group.append(where);
     }
@@ -2122,7 +2178,7 @@ function starInfo(map: GalaxyMap, index: number, k: number): MenuContent {
   const facts: [string, string][] = [['Type', star.name], ['Temperature', star.temperature]];
   if (system.stars.length > 1) facts.push(['Role', k === 0 ? 'Primary' : `Companion to ${system.name} A`]);
   return {
-    eyebrow: star.eyebrow ?? 'Star',
+    eyebrow: star.eyebrow,
     title: system.stars.length > 1 ? `${system.name} ${starLetter(k)}` : system.name,
     subtitle: star.name,
     facts,
