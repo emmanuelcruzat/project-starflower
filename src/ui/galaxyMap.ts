@@ -43,6 +43,8 @@ const NAME_SIZE = { min: 14, max: 44 };
 const SMALL_TERRITORY = { systems: 3, size: 11, above: 24 };
 /** Faint background stars. Decoration only: they can't be hovered and have no names. */
 const DUST_COUNT = 1800;
+/** How big an uncharted system's faint point is, in map units (fog of war). */
+const FOG_STAR_RADIUS = 2.2;
 const MAX_ZOOM = 3;
 /** Two taps on the map this close together (in milliseconds), the first on a system, open that system's diagram. */
 const DOUBLE_TAP_MS = 400;
@@ -135,9 +137,19 @@ const galaxyPicks = new Map<string, number | null>();
 const openSystems = new Map<string, number>();
 const systemCameras = new Map<string, Camera>();
 
+/** DEV: whether the star map has fog of war. Only the dev panel turns it off (main.ts). */
+let fogOfWar = true;
+
+/** DEV: turns the star map's fog of war on or off. Takes effect when the map is next drawn. */
+export function setFogOfWar(on: boolean): void {
+  fogOfWar = on;
+}
+
 /** `onClaim` claims an unclaimed system for the player; the screen is then rebuilt with it in their territory. */
 export function galaxyMapView(nation: Nation, onClaim: (system: number, name: string) => void, onOpenManagement: () => void): HTMLElement {
   const map = generateMap(nation);
+  // With the fog off, every system is charted.
+  if (!fogOfWar) map.visible.fill(true);
   const region = generateRegion(nation, map.sector.name);
   const galaxy = generateGalaxy(nation, region.name);
   const home = map.systems[map.home];
@@ -228,6 +240,7 @@ export function galaxyMapView(nation: Nation, onClaim: (system: number, name: st
     // focused system's miniature has, under its lanes, so they stand out
     // from whatever lies behind.
     for (const i of members) {
+      if (!map.visible[i]) continue;
       litLayer.append(svg('circle', { cx: map.systems[i].x.toFixed(1), cy: map.systems[i].y.toFixed(1), r: CONSTELLATION_AURA, class: 'preview-shadow' }));
     }
     for (const lane of insideLanes) drawLane(lane, '');
@@ -694,9 +707,13 @@ function closeButton(focus: FocusHandler): HTMLElement {
   return close;
 }
 
-/** A system's name as a link that focuses it, with its owner's color. */
+/** A system's name as a link that focuses it, with its owner's color. An uncharted one is just that. */
 function systemRow(map: GalaxyMap, i: number, focus: FocusHandler, note = ownerName(map, map.owners[i])): HTMLElement {
   const item = el('li');
+  if (!map.visible[i]) {
+    item.append(el('span', 'swatch uncharted'), el('span', 'muted', 'Uncharted system'));
+    return item;
+  }
   const owner = map.owners[i];
   const system = map.systems[i];
   const link = el('button', 'link-button map-system-link', system.name + (i === map.home ? ' (capital)' : ''));
@@ -711,18 +728,25 @@ function constellationPanel(map: GalaxyMap, index: number, focus: FocusHandler):
 
   // Constellation: its systems, who owns them, and where its lanes lead.
   const members = new Set(constellation.systems);
+  // Only lanes the player can see count, and only constellations they know of.
+  const known = (c: number) => map.constellations[c].systems.some((i) => map.visible[i]);
   const neighbours = new Set<number>();
   for (const [a, b] of map.lanes) {
-    if (members.has(a) !== members.has(b)) neighbours.add(map.systems[members.has(a) ? b : a].constellation);
+    if (members.has(a) === members.has(b) || !map.visible[members.has(a) ? a : b]) continue;
+    const other = map.systems[members.has(a) ? b : a].constellation;
+    if (known(other)) neighbours.add(other);
   }
   const systems = el('ul', 'map-info-systems');
-  for (const i of constellation.systems) systems.append(systemRow(map, i, focus));
+  // Charted systems first; the uncharted ones after, as plain rows.
+  const ordered = [...constellation.systems].sort((a, b) => Number(map.visible[b]) - Number(map.visible[a]));
+  for (const i of ordered) systems.append(systemRow(map, i, focus));
+  const uncharted = constellation.systems.filter((i) => !map.visible[i]).length;
 
   const part = el('section', 'map-info-section');
   part.append(
     el('p', 'eyebrow', 'Constellation'),
     el('h3', 'map-info-title', constellation.name),
-    el('p', 'muted', `${constellation.systems.length} systems · lanes to ${neighbours.size} neighboring constellation${neighbours.size === 1 ? '' : 's'}`),
+    el('p', 'muted', `${constellation.systems.length} systems${uncharted > 0 ? ` (${uncharted} uncharted)` : ''} · lanes to ${neighbours.size} neighboring constellation${neighbours.size === 1 ? '' : 's'}`),
     el('p', 'map-info-description', constellationBlurb(map, index)),
     systems,
   );
@@ -740,7 +764,8 @@ function starPhrase(star: StarType): string {
 
 /** A sentence or two about a constellation: who holds it, and its most striking star. */
 function constellationBlurb(map: GalaxyMap, index: number): string {
-  const members = map.constellations[index].systems;
+  // Only what the player can see: uncharted systems tell them nothing.
+  const members = map.constellations[index].systems.filter((i) => map.visible[i]);
   const holders = new Map<number | null, number>();
   for (const i of members) holders.set(map.owners[i], (holders.get(map.owners[i]) ?? 0) + 1);
   const claimed = [...holders.entries()].filter(([owner]) => owner !== null).sort((a, b) => b[1] - a[1]);
@@ -751,7 +776,7 @@ function constellationBlurb(map: GalaxyMap, index: number): string {
   // The biggest primary star stands out most; a black hole beats them all.
   const rank = (i: number) => (map.systems[i].stars[0].exotic === 'black-hole' ? Infinity : map.systems[i].stars[0].radius);
   const brightest = members.reduce((best, i) => (rank(i) > rank(best) ? i : best));
-  return `A group of ${members.length} star systems, ${held}. Its most striking star is ${map.systems[brightest].name}, ${starPhrase(map.systems[brightest].stars[0])}.`;
+  return `A group of ${members.length} charted star system${members.length === 1 ? '' : 's'}, ${held}. Its most striking star is ${map.systems[brightest].name}, ${starPhrase(map.systems[brightest].stars[0])}.`;
 }
 
 /** The info panel for a void: what it is, and which constellations border it. */
@@ -1219,7 +1244,8 @@ function drawMap(map: GalaxyMap, seed: string, exits: SectorExit[]): SVGSVGEleme
   // Layers, back to front: dust, territories, lanes, stars.
   // The dust thins out past the sector's edge, so its shape shows.
   root.append(dust(seed, MAP_WIDTH, MAP_HEIGHT, DUST_COUNT, sectorShape(seed)));
-  const claimed = owners.flatMap((owner, i) => (owner === null ? [] : [i]));
+  // Borders are only known where the player can see (fog of war, map.visible).
+  const claimed = owners.flatMap((owner, i) => (owner === null || !map.visible[i] ? [] : [i]));
   const cells = territoryCells(systems, claimed, TERRITORY_RADIUS);
   const defs = svg('defs', {});
   const paints = new Paints(defs, 'map');
@@ -1252,19 +1278,30 @@ function drawMap(map: GalaxyMap, seed: string, exits: SectorExit[]): SVGSVGEleme
   });
   root.append(defs, territories);
 
+  // Lanes inside the fog are unknown. One leading into it from a visible
+  // system is known, but fades: where it goes isn't.
   for (const [a, b] of lanes) {
+    if (!map.visible[a] && !map.visible[b]) continue;
     root.append(svg('line', {
       x1: systems[a].x.toFixed(1), y1: systems[a].y.toFixed(1),
       x2: systems[b].x.toFixed(1), y2: systems[b].y.toFixed(1),
-      class: 'lane',
+      class: map.visible[a] && map.visible[b] ? 'lane' : 'lane fog-lane',
     }));
   }
-  root.append(exitLayer(map, exits));
+  root.append(exitLayer(map, exits.filter((exit) => map.visible[exit.system])));
   // Above the lanes so they don't cross out the letters, below the stars so
   // hovering still works.
   root.append(constellationLayer(map), names);
 
+  // Uncharted systems: just a faint point each, with nothing to hover or click.
+  const fog = svg('g', { class: 'fog-stars', 'aria-hidden': 'true' });
+  root.append(fog);
+
   systems.forEach((system, i) => {
+    if (!map.visible[i]) {
+      fog.append(svg('circle', { cx: system.x.toFixed(1), cy: system.y.toFixed(1), r: FOG_STAR_RADIUS, class: 'fog-star' }));
+      return;
+    }
     const isHome = i === home;
     const owner = owners[i];
     const ownerName = owner === null ? 'Unclaimed' : powers[owner].name;
@@ -1428,6 +1465,8 @@ function territoryName(name: string, power: number, points: Point[], rings: Poin
 function constellationLayer(map: GalaxyMap): SVGGElement {
   const layer = svg('g', { class: 'constellation-layer' });
   map.constellations.forEach((constellation, index) => {
+    // A constellation is only named once the player can see a star of it.
+    if (!constellation.systems.some((i) => map.visible[i])) return;
     const { x, y } = clearSpot(map, constellation.systems);
     const label = svg('text', {
       x: x.toFixed(1), y: y.toFixed(1), class: 'constellation-name', 'text-anchor': 'middle', 'dominant-baseline': 'central', 'data-constellation': index,
@@ -1723,6 +1762,8 @@ function systemNear(map: GalaxyMap, point: Point, within: number): number | null
   let best: number | null = null;
   let bestDistance = within;
   map.systems.forEach((system, i) => {
+    // Uncharted systems can't be opened.
+    if (!map.visible[i]) return;
     const d = Math.hypot(system.x - point.x, system.y - point.y);
     if (d <= bestDistance) [best, bestDistance] = [i, d];
   });
@@ -1976,6 +2017,11 @@ function systemDiagram(
   // one opens the system at its other end.
   for (const n of connections(map, index)) {
     const other = map.systems[n];
+    if (!map.visible[n]) {
+      // Into the fog: the lane is known, not where it leads. Not clickable.
+      laneOut(svg('g', { class: 'diagram-lane-uncharted' }), Math.atan2(other.y - system.y, other.x - system.x), 'Hyperlane into uncharted space', 'Uncharted system');
+      continue;
+    }
     laneOut(
       svg('g', { class: 'diagram-lane', 'data-system': n, tabindex: 0 }),
       Math.atan2(other.y - system.y, other.x - system.x),

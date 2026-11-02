@@ -9,6 +9,8 @@ export interface DevSettings {
   speed: number;
   /** How far game time has been pushed ahead of real time, in ms. */
   offsetMs: number;
+  /** Dev panel: whether the star map's fog of war is on (missing means on). Ignored outside dev mode. */
+  fogOfWar?: boolean;
 }
 
 export interface Clock {

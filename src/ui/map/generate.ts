@@ -93,6 +93,40 @@ export interface GalaxyMap {
   constellations: MapConstellation[];
   /** The large empty stretches with names on the map. */
   voids: SectorVoid[];
+  /**
+   * Fog of war: for each system, whether the player can see it. Their own
+   * systems and any within SIGHT_JUMPS hyperlanes of one are visible; the
+   * rest are uncharted, and the map shows only that a star is there.
+   */
+  visible: boolean[];
+}
+
+/** How many hyperlane jumps from the player's systems they can see. */
+export const SIGHT_JUMPS = 2;
+
+/** Which systems the player can see: their own, and everything within SIGHT_JUMPS hyperlanes of them. */
+export function visibleSystems(systems: StarSystem[], lanes: Lane[], owners: (number | null)[]): boolean[] {
+  const neighbors: number[][] = systems.map(() => []);
+  for (const [a, b] of lanes) {
+    neighbors[a].push(b);
+    neighbors[b].push(a);
+  }
+  // Out from every owned system at once, one jump at a time.
+  const visible = owners.map((owner) => owner === 0);
+  let frontier = visible.flatMap((seen, i) => (seen ? [i] : []));
+  for (let jump = 0; jump < SIGHT_JUMPS; jump++) {
+    const next: number[] = [];
+    for (const i of frontier) {
+      for (const n of neighbors[i]) {
+        if (!visible[n]) {
+          visible[n] = true;
+          next.push(n);
+        }
+      }
+    }
+    frontier = next;
+  }
+  return visible;
 }
 
 export function generateMap(nation: Nation): GalaxyMap {
@@ -128,7 +162,9 @@ export function generateMap(nation: Nation): GalaxyMap {
     if (owners[i] === null) owners[i] = 0;
   }
   const voids = namedVoids(nation.id, systems);
-  return { systems, lanes, powers, owners, home, sector, constellations, voids };
+  // After claims, so each new system widens what the player can see.
+  const visible = visibleSystems(systems, lanes, owners);
+  return { systems, lanes, powers, owners, home, sector, constellations, voids, visible };
 }
 
 // --- Systems and lanes ---

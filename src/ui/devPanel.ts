@@ -9,8 +9,11 @@ import { button, byId, el } from './dom';
 const SPEEDS = [1, 60, 600, 3600];
 const SKIPS: [label: string, ms: number][] = [['+1h', HOUR], ['+6h', 6 * HOUR], ['+1 day', DAY]];
 
-/** Builds the panel once. `onTimeChanged` lets main.ts advance and redraw immediately. */
-export function mountDevPanel(clock: Clock, onTimeChanged: () => void): void {
+/**
+ * Builds the panel once. `onTimeChanged` lets main.ts advance and redraw
+ * immediately; `onFogChanged` turns the star map's fog of war on or off.
+ */
+export function mountDevPanel(clock: Clock, onTimeChanged: () => void, onFogChanged: (on: boolean) => void): void {
   const panel = byId('dev-panel');
   panel.hidden = false;
 
@@ -42,8 +45,23 @@ export function mountDevPanel(clock: Clock, onTimeChanged: () => void): void {
     ),
   );
 
+  // Fog of war: see the whole map while testing, or play it as a player would.
+  const fogRow = el('div', 'dev-row');
+  function drawFog(): void {
+    const on = clock.settings.fogOfWar !== false;
+    fogRow.replaceChildren(
+      el('span', 'muted', 'Fog of war'),
+      button(on ? 'On' : 'Off', `dev-button ${on ? 'selected' : ''}`, () => {
+        clock.settings.fogOfWar = !on;
+        drawFog();
+        onFogChanged(!on);
+      }),
+    );
+  }
+
   drawSpeeds();
-  panel.replaceChildren(el('p', 'eyebrow', 'Developer'), clockText, speedRow, skipRow);
+  drawFog();
+  panel.replaceChildren(el('p', 'eyebrow', 'Developer'), clockText, speedRow, skipRow, fogRow);
 }
 
 export function updateDevClock(clock: Clock, now: number): void {

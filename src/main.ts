@@ -9,6 +9,7 @@ import { advanceTo } from './engine/simulation';
 import { loadDevSettings, loadNation, saveDevSettings, saveNation } from './storage';
 import type { GameContent, Nation } from './types';
 import { mountDevPanel, updateDevClock } from './ui/devPanel';
+import { setFogOfWar } from './ui/galaxyMap';
 import { updateLiveTimers } from './ui/dom';
 import { renderCreation, renderGame, showContentProblems, viewKey, type Tab } from './ui/render';
 
@@ -32,6 +33,8 @@ function start(content: GameContent): void {
   // the game can't race ahead unnoticed. Any offset already added stays,
   // because saved timestamps depend on it.
   if (!devMode) devSettings.speed = 1;
+  // Likewise, the fog of war can only be off while the dev panel is showing.
+  setFogOfWar(!devMode || devSettings.fogOfWar !== false);
   const clock = createClock(devSettings);
 
   let nation: Nation | null = loadNation();
@@ -124,7 +127,13 @@ function start(content: GameContent): void {
     draw();
   });
 
-  if (devMode) mountDevPanel(clock, tick);
+  if (devMode) {
+    mountDevPanel(clock, tick, (on) => {
+      setFogOfWar(on);
+      saveDevSettings(clock.settings);
+      draw();
+    });
+  }
 
   // Catch up on everything that happened while the page was closed, then start the clock.
   if (nation) nation = advanceTo(nation, clock.now(), content);

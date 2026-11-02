@@ -1834,6 +1834,35 @@ button.link-button.map-system-link:hover {
   stroke-width: 1.2;
 }
 
+/* --- Fog of war (map.visible, see generate.ts) ---
+   Uncharted systems are faint gray points with nothing to click; lanes
+   leading into the fog from charted space are dashed and dim. */
+/* A touch bigger and brighter than the background dust, so they still read as systems. */
+.starmap .fog-star {
+  fill: #8494ab;
+  fill-opacity: 0.6;
+  pointer-events: none;
+}
+
+.starmap .fog-lane {
+  stroke-dasharray: 3 4;
+  stroke-opacity: 0.5;
+}
+
+.swatch.uncharted {
+  border: 1px dotted #3a4658;
+  background: none;
+}
+
+.system-map .diagram-lane-uncharted .diagram-lane-name {
+  fill: #4a5568;
+  font-style: italic;
+}
+
+.system-map .diagram-lane-uncharted .lane {
+  stroke-opacity: 0.45;
+}
+
 /* A focused system's lanes, drawn above the gray-out so its connections stand out. */
 .starmap .lit-lane {
   stroke: #5a7396;
