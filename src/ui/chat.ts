@@ -44,7 +44,7 @@ export function chatMockup(): HTMLElement {
   // The header stays visible when minimized, with the online count.
   const header = el('div', 'chat-header');
   const tabs = el('div', 'chat-tabs');
-  tabs.append(el('span', 'chat-tab selected', 'Sector'), el('span', 'chat-tab', 'Diplomatic'));
+  tabs.append(el('span', 'chat-tab selected', 'Cluster'), el('span', 'chat-tab', 'Diplomatic'));
   const online = SAMPLE_ONLINE.filter((p) => p.status === 'online').length;
   const count = el('span', 'chat-online-count', `${online} online`);
   const toggle = el('button', 'secondary small chat-toggle', minimized ? '▴' : '▾');

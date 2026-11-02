@@ -71,7 +71,7 @@ export function nationArticle(nation: Nation, content: GameContent): HTMLElement
   const facts = el('dl', 'infobox-facts');
   const fact = (label: string, value: string) => facts.append(el('dt', '', label), el('dd', '', value));
   fact('Capital', `${capitalName} (${home.name} system)`);
-  fact('Location', `${map.sector.name} Sector, ${region.name} Region`);
+  fact('Location', `${map.sector.name} Cluster, ${region.name} Region`);
   fact('Government', governmentName);
   fact('Population', formatPopulation(stats.population));
   fact('Territory', `${territory} star system${territory === 1 ? '' : 's'}`);
@@ -84,7 +84,7 @@ export function nationArticle(nation: Nation, content: GameContent): HTMLElement
   const governmentWord = governmentName.toLowerCase();
   const cohesionNote = titles.cohesion.description;
   root.append(
-    el('p', 'article-lead', `The ${short} is ${article(governmentWord)} ${governmentWord} in the ${map.sector.name} Sector of the ${region.name} Region. `
+    el('p', 'article-lead', `The ${short} is ${article(governmentWord)} ${governmentWord} in the ${map.sector.name} Cluster of the ${region.name} Region. `
       + `It governs ${territory} star system${territory === 1 ? '' : 's'} and ${formatPopulation(stats.population)} people from its capital, ${capitalName}, `
       + `in the ${home.name} system.`),
     el('p', '', government ? government.description : ''),
@@ -94,7 +94,7 @@ export function nationArticle(nation: Nation, content: GameContent): HTMLElement
       + (cohesionNote ? `: ${cohesionNote.charAt(0).toLowerCase()}${cohesionNote.slice(1)}` : '.')),
   );
   if (neighbors.length > 0) {
-    root.append(el('p', '', `It shares the ${map.sector.name} Sector with ${listOf(neighbors)}.`));
+    root.append(el('p', '', `It shares the ${map.sector.name} Cluster with ${listOf(neighbors)}.`));
   }
 
   // The capital system: its stars, then every planet, the capital marked.

@@ -353,10 +353,8 @@ figcaption,
   stroke-width: 1.6;
 }
 
-.map-star {
-  filter: drop-shadow(0 0 2px var(--star));
-}
-
+/* Each .map-star is a system's stars, drawn as on the game's sector map
+   (sectorArt.ts): glows and all, so they need no filter of their own. */
 .map-star.twinkle {
   animation: twinkle 7s ease-in-out infinite;
 }
@@ -373,7 +371,6 @@ figcaption,
 
 .crop .map-star.lit {
   opacity: 1;
-  filter: drop-shadow(0 0 4px var(--star));
 }
 
 .map-name {
@@ -836,6 +833,118 @@ main > section:not(.hero) {
   overflow: hidden;
   aspect-ratio: 4 / 3;
   background: radial-gradient(ellipse at center, #0b1220 0%, #04060a 80%);
+}
+
+/* --- The system view gallery (systemArt.ts) --- */
+
+.systems {
+  border-top: 1px solid var(--panel-edge);
+}
+
+.systems .section-head p:not(.eyebrow) {
+  max-width: 62ch;
+  margin-top: 14px;
+}
+
+/* Three systems side by side, best first. */
+.system-gallery {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.system-card {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  background: var(--panel);
+  border: 1px solid var(--panel-edge);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.system-frame {
+  flex: none;
+  aspect-ratio: 1;
+  background: radial-gradient(ellipse at center, #0b1220 0%, #04060a 75%);
+}
+
+.system-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.system-card figcaption {
+  display: grid;
+  gap: 2px;
+  padding: 14px 18px 16px;
+  border-top: 1px solid var(--panel-edge);
+}
+
+.system-kind {
+  color: var(--accent-2);
+}
+
+.system-name {
+  color: #eef3f9;
+  font-family: var(--sans);
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.system-facts {
+  color: var(--muted);
+  letter-spacing: 0.08em;
+}
+
+/* Inside the pictures: orbits as in the game's system view. */
+.art-orbit {
+  fill: none;
+  stroke: #2b3a52;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.art-companion-orbit {
+  stroke-dasharray: 4 5;
+}
+
+.art-moon-orbit {
+  stroke-opacity: 0.7;
+}
+
+/* Bodies (bodies.ts): edges, glows and lava as in the game. */
+.system-art .planet-edge {
+  fill: none;
+  stroke: rgba(0, 0, 0, 0.45);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.system-art .diagram-star {
+  filter: drop-shadow(0 0 6px var(--star));
+}
+
+.system-art .diagram-star.substellar {
+  filter: drop-shadow(0 0 3px var(--star));
+}
+
+.system-art .lava {
+  filter: drop-shadow(0 0 1px #ff7a3c);
+}
+
+.system-art .accretion-disc,
+.system-art .photon-ring {
+  filter: drop-shadow(0 0 3px #ffb36b);
+}
+
+@media (max-width: 860px) {
+  .system-gallery {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* --- Newsletter --- */

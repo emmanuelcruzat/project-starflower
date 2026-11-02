@@ -1,0 +1,410 @@
+/* MOCKUP: the account page (account/index.html). Builds on the homepage's
+   palette, header and buttons (src/home/home.css). */
+
+body.account {
+  --bad: #ff8a78;
+  --field: #080b12;
+}
+
+/* Two halves: the pitch over the star map, and the form. */
+.account-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  min-height: calc(100vh - var(--header));
+  min-height: calc(100svh - var(--header));
+}
+
+/* The homepage's page-width sections (main > section in home.css) don't
+   apply: these halves fill the screen between them. */
+.account-layout > .account-art,
+.account-layout > .account-panel {
+  max-width: none;
+  margin: 0;
+}
+
+/* --- The pitch --- */
+
+.account-layout > .account-art {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  padding: 56px var(--gutter);
+  overflow: hidden;
+  isolation: isolate;
+  border-right: 1px solid var(--panel-edge);
+}
+
+.account-map {
+  position: absolute;
+  inset: -6%;
+  z-index: -2;
+  opacity: 0.9;
+  animation: drift 90s ease-in-out infinite alternate;
+}
+
+.account-art::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(0deg, rgba(6, 8, 13, 0.97) 0%, rgba(6, 8, 13, 0.75) 38%, rgba(6, 8, 13, 0.15) 75%),
+    radial-gradient(circle at 70% 30%, transparent 0%, rgba(6, 8, 13, 0.4) 70%);
+}
+
+.account-art-inner {
+  max-width: 460px;
+}
+
+.account-art h2 {
+  margin: 12px 0 22px;
+}
+
+.account-perks {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.account-perks li {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+}
+
+/* The wordmark's four-pointed star, small. */
+.perk-mark {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  background: var(--accent);
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  translate: 0 1px;
+}
+
+.account-art-readout {
+  margin-top: 32px;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* --- The form --- */
+
+.account-layout > .account-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px var(--gutter);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 430px;
+}
+
+.auth-tabs {
+  display: flex;
+  margin-bottom: 28px;
+  border-bottom: 1px solid var(--panel-edge);
+}
+
+.auth-tab {
+  flex: 1;
+  padding: 12px 8px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.auth-tab:hover {
+  color: var(--text);
+}
+
+.auth-tab[aria-selected='true'] {
+  color: #eef3f9;
+  border-bottom-color: var(--accent);
+}
+
+.auth-form {
+  display: grid;
+  gap: 18px;
+}
+
+.auth-head h1 {
+  font-size: clamp(1.5rem, 2.6vw, 1.9rem);
+  font-weight: 600;
+}
+
+.auth-head p {
+  margin-top: 8px;
+  color: var(--muted);
+}
+
+/* Fields */
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field label,
+.field-label-row label {
+  font-size: 0.9rem;
+}
+
+.field-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.field-link {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+}
+
+.field-link:hover {
+  text-decoration: underline;
+}
+
+.field input:not([type='checkbox']) {
+  width: 100%;
+  min-width: 0;
+  padding: 11px 12px;
+  color: #eef3f9;
+  font: inherit;
+  background: var(--field);
+  border: 1px solid var(--panel-edge);
+  border-radius: 3px;
+  transition: border-color 0.15s;
+}
+
+.field input:not([type='checkbox']):hover {
+  border-color: #2b3a52;
+}
+
+.field input:focus-visible {
+  outline-offset: 0;
+  border-color: var(--accent-2);
+}
+
+.field input[aria-invalid='true'] {
+  border-color: var(--bad);
+}
+
+.field-hint {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.field-error {
+  font-size: 0.82rem;
+  color: var(--bad);
+}
+
+/* The Show / Hide button sits inside the password box. */
+.password-row {
+  position: relative;
+}
+
+.password-row input:not([type='checkbox']) {
+  padding-right: 68px;
+}
+
+.reveal {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  translate: 0 -50%;
+  padding: 5px 9px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.reveal:hover {
+  color: var(--text);
+  border-color: var(--panel-edge);
+}
+
+/* Password strength: four bars that fill and warm as it improves. */
+.strength {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.strength-bars {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 3px;
+  flex: none;
+  width: 84px;
+}
+
+.strength-bars span {
+  height: 4px;
+  background: var(--panel-edge);
+  border-radius: 2px;
+  transition: background 0.2s;
+}
+
+.strength[data-strength='1'] .strength-bars span:nth-child(-n + 1) { background: var(--bad); }
+.strength[data-strength='2'] .strength-bars span:nth-child(-n + 2) { background: var(--accent); }
+.strength[data-strength='3'] .strength-bars span:nth-child(-n + 3) { background: var(--accent-2); }
+.strength[data-strength='4'] .strength-bars span { background: var(--good); }
+
+.strength[data-strength='1'] .strength-label { color: var(--bad); }
+.strength[data-strength='4'] .strength-label { color: var(--good); }
+
+/* Checkboxes */
+
+.check {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.check input {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 3px 0 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.check strong {
+  color: #eef3f9;
+  font-weight: 600;
+}
+
+/* Bringing a nation along is the headline, so it gets a box of its own. */
+.check-nation {
+  padding: 12px 14px;
+  background: var(--panel);
+  border: 1px solid var(--panel-edge);
+  border-left: 3px solid var(--accent-2);
+  border-radius: 3px;
+}
+
+.check-error {
+  margin-top: -10px;
+  padding-left: 26px;
+}
+
+.auth-submit {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.auth-form .form-note:empty {
+  display: none;
+}
+
+.auth-switch {
+  font-size: 0.9rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.link-button {
+  padding: 0;
+  color: var(--accent-2);
+  font: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.link-button:hover {
+  text-decoration: underline;
+}
+
+/* --- Or, play without one --- */
+
+.auth-alt {
+  display: grid;
+  gap: 12px;
+  margin-top: 28px;
+  text-align: center;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--panel-edge);
+}
+
+.auth-guest {
+  width: 100%;
+}
+
+/* --- Small screens: the form first, the pitch as a short banner above it --- */
+
+@media (max-width: 900px) {
+  .account-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .account-layout > .account-art {
+    min-height: 220px;
+    padding-top: 40px;
+    padding-bottom: 28px;
+    border-right: none;
+    border-bottom: 1px solid var(--panel-edge);
+  }
+
+  .account-perks,
+  .account-art-readout {
+    display: none;
+  }
+
+  .account-art h2 {
+    margin-bottom: 0;
+  }
+
+  .account-layout > .account-panel {
+    align-items: flex-start;
+    padding-top: 32px;
+  }
+}

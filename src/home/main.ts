@@ -1,57 +1,12 @@
 import './home.css';
-import { generateMap, MAP_HEIGHT, MAP_WIDTH, type GalaxyMap, type StarType } from '../ui/map/generate';
-import type { Nation } from '../types';
+import { MAP_HEIGHT, MAP_WIDTH, type GalaxyMap } from '../ui/map/generate';
+import { drawSector, showcaseMap, svg } from './sectorArt';
+import { drawSystem, showcaseSystems } from './systemArt';
 
 // The homepage (index.html). The game itself lives at /play/. This draws
-// the hero's star map and the Chart pillar's close-up from a real generated
-// sector, and wires up the menu and the placeholder sign-in and newsletter.
-
-const SVG_NS = 'http://www.w3.org/2000/svg';
-
-/** The homepage always shows the same sector. Only these fields matter to the map generator. */
-const SHOWCASE = { id: 'starflower-homepage', name: 'Starflower', prefix: 'Union', claimedSystems: [] } as unknown as Nation;
-/** The glow of a black hole's accretion disc, as in the game. */
-const ACCRETION = '#ffb36b';
-
-function svg<K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, string | number>): SVGElementTagNameMap[K] {
-  const node = document.createElementNS(SVG_NS, tag);
-  for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, String(value));
-  return node;
-}
-
-function star(type: StarType, x: number, y: number, scale: number): SVGCircleElement {
-  const black = type.exotic === 'black-hole';
-  return svg('circle', {
-    cx: x.toFixed(1), cy: y.toFixed(1), r: (type.radius * scale).toFixed(2),
-    fill: type.colour, stroke: black ? ACCRETION : 'none', 'stroke-width': black ? 1 : 0,
-    class: 'map-star', style: `--star: ${black ? ACCRETION : type.colour}`,
-  });
-}
-
-/** Lanes and stars of a map, inside a viewBox. `lit` systems (and lanes between them) are highlighted. */
-function drawSector(map: GalaxyMap, viewBox: string, lit = new Set<number>(), scale = 1): SVGSVGElement {
-  const root = svg('svg', { viewBox, preserveAspectRatio: 'xMidYMid slice', class: 'sector-art' });
-  const lanes = svg('g', { class: 'map-lanes' });
-  for (const [a, b] of map.lanes) {
-    const p = map.systems[a];
-    const q = map.systems[b];
-    lanes.append(svg('line', {
-      x1: p.x.toFixed(1), y1: p.y.toFixed(1), x2: q.x.toFixed(1), y2: q.y.toFixed(1),
-      class: lit.has(a) && lit.has(b) ? 'map-lane lit' : 'map-lane',
-    }));
-  }
-  const stars = svg('g', { class: 'map-stars' });
-  map.systems.forEach((system, i) => {
-    const node = star(system.stars[0], system.x, system.y, scale);
-    if (lit.has(i)) node.classList.add('lit');
-    // A gentle, staggered twinkle on some stars (home.css).
-    if (i % 7 === 0) node.style.animationDelay = `${(i % 13) * 0.6}s`;
-    if (i % 7 === 0) node.classList.add('twinkle');
-    stars.append(node);
-  });
-  root.append(lanes, stars);
-  return root;
-}
+// the hero's star map, the Chart pillar's close-up and the system view
+// gallery from a real generated sector (sectorArt.ts, systemArt.ts), and
+// wires up the menu and the placeholder newsletter.
 
 function drawHero(map: GalaxyMap): void {
   const host = document.querySelector('.hero-map');
@@ -62,7 +17,7 @@ function drawHero(map: GalaxyMap): void {
     const node = document.querySelector(`[data-hud="${key}"]`);
     if (node) node.textContent = text;
   };
-  set('sector', `${map.sector.name} Sector`);
+  set('sector', `${map.sector.name} Cluster`);
   set('systems', `${map.systems.length} systems · ${map.constellations.length} constellations`);
   // A made-up but steady sky position, from the sector's name.
   const code = [...map.sector.name].reduce((sum, c) => sum + c.charCodeAt(0), 0);
@@ -91,6 +46,36 @@ function drawCrop(map: GalaxyMap): void {
   host.append(art);
 }
 
+/** The system view gallery: a few of the showcase sector's systems, as the game draws them. */
+function drawGallery(map: GalaxyMap): void {
+  const host = document.querySelector('[data-system-gallery]');
+  if (!host) return;
+  for (const shown of showcaseSystems(map)) {
+    const system = map.systems[shown.index];
+    const moons = shown.planets.reduce((sum, p) => sum + p.moons.length, 0);
+    const card = document.createElement('figure');
+    card.className = 'system-card';
+    const frame = document.createElement('div');
+    frame.className = 'system-frame';
+    frame.append(drawSystem(map, shown));
+    const caption = document.createElement('figcaption');
+    const kind = document.createElement('span');
+    kind.className = 'system-kind';
+    kind.textContent = system.stars.map((s) => s.name).join(' + ');
+    const name = document.createElement('span');
+    name.className = 'system-name';
+    name.textContent = system.name;
+    const facts = document.createElement('span');
+    facts.className = 'system-facts';
+    const parts = [`${shown.planets.length} planet${shown.planets.length === 1 ? '' : 's'}`, `${moons} moon${moons === 1 ? '' : 's'}`];
+    if (shown.belt) parts.push('an asteroid belt');
+    facts.textContent = parts.join(' · ');
+    caption.append(kind, name, facts);
+    card.append(frame, caption);
+    host.append(card);
+  }
+}
+
 /** The small-screen menu. */
 function wireMenu(): void {
   const toggle = document.querySelector<HTMLButtonElement>('.menu-toggle');
@@ -107,7 +92,7 @@ function wireMenu(): void {
   });
 }
 
-/** PLACEHOLDER: sign-in and account buttons explain they're coming instead of doing anything. */
+/** PLACEHOLDER: buttons for what isn't built yet explain they're coming instead of doing anything. */
 function wirePlaceholders(): void {
   const toast = document.querySelector<HTMLElement>('.toast');
   let timer = 0;
@@ -132,8 +117,9 @@ function wirePlaceholders(): void {
   });
 }
 
-const map = generateMap(SHOWCASE);
+const map = showcaseMap();
 drawHero(map);
 drawCrop(map);
+drawGallery(map);
 wireMenu();
 wirePlaceholders();

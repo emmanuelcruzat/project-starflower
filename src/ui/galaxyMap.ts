@@ -3,7 +3,8 @@ import type { Nation } from '../types';
 import { el } from './dom';
 import { playChirp, playWhoosh } from './sound';
 import { closeContextMenu, showContextMenu, type MenuContent } from './contextMenu';
-import { ACCRETION_COLOUR, diagramStar, lightFrom, mapStar, moonBody, Paints, planetBody, rockPath } from './map/bodies';
+import { ACCRETION_COLOUR, companionOffset, diagramStar, lightFrom, mapStar, moonBody, Paints, planetBody, rockPath } from './map/bodies';
+import { BELT_BAND, DIAGRAM, diagramPlanetSize, diagramStarSize, orbitRadii, ORBITS } from './map/scale';
 import { borderPath, fillPath, pointInRing, ringsPath, territoryCells, territoryRings, type Point } from './map/borders';
 import {
   BELT_TYPE, beltName, describeStars, generateMap, hostOrbits, MAP_HEIGHT, MAP_WIDTH, planetNames, sectorShape, starLetter, systemBelt, systemPlanets,
@@ -367,7 +368,7 @@ export function galaxyMapView(nation: Nation, onClaim: (system: number, name: st
     // with room for the hyperlanes and their names.
     const margin = LANE_OUT.label + 40;
     if (frame) systemControls.lookAt(SYSTEM_SIZE / 2, SYSTEM_SIZE / 2, systemControls.zoomToFit(2 * (reach.x + margin), 2 * (reach.y + margin)));
-    systemMap.setAttribute('aria-label', `Diagram of the ${map.systems[index].name} system: ${describeStars(map.systems[index].stars)}, ${planets.length} planets${belt ? ', an asteroid belt' : ''}. Zoom out or press Escape to return to the sector.`);
+    systemMap.setAttribute('aria-label', `Diagram of the ${map.systems[index].name} system: ${describeStars(map.systems[index].stars)}, ${planets.length} planets${belt ? ', an asteroid belt' : ''}. Zoom out or press Escape to return to the cluster.`);
     crumbs.replaceChildren(...breadcrumbs(map, galaxy, region, { kind: 'system', index }, map.systems[index].constellation, fromSystem, (view) => showView(view, 'zoom')));
     info.hidden = false;
     info.replaceChildren(...systemPanel(map, index, connections(map, index), planets, belt, fromSystem), bodiesSection(map, index, planets, belt));
@@ -627,7 +628,7 @@ export function galaxyMapView(nation: Nation, onClaim: (system: number, name: st
     if (current() !== 'sector') showView('sector', 'zoom');
     controls.lookAt(home.x, home.y, 1);
   });
-  button('Sector', `Show the whole ${map.sector.name} Sector`, () => goTo('sector'));
+  button('Cluster', `Show the whole ${map.sector.name} Cluster`, () => goTo('sector'));
   if (SHOW_OUTER_VIEWS) {
     button('Region', `Show the ${region.name} Region`, () => goTo('region'));
     button('Galaxy', `Show the whole ${galaxy.name} Galaxy`, () => goTo('galaxy'));
@@ -665,7 +666,7 @@ function breadcrumbs(
       { label: `${galaxy.name} Galaxy`, target: 'galaxy' as const },
       { label: `${region.name} Region`, target: 'region' as const },
     ] : []),
-    { label: `${map.sector.name} Sector`, target: null },
+    { label: `${map.sector.name} Cluster`, target: null },
   ];
   if (constellation !== null) steps.push({ label: map.constellations[constellation].name, target: { kind: 'constellation', index: constellation } });
   if (current?.kind === 'system') steps.push({ label: map.systems[current.index].name, target: current });
@@ -750,7 +751,7 @@ function constellationBlurb(map: GalaxyMap, index: number): string {
   // The biggest primary star stands out most; a black hole beats them all.
   const rank = (i: number) => (map.systems[i].stars[0].exotic === 'black-hole' ? Infinity : map.systems[i].stars[0].radius);
   const brightest = members.reduce((best, i) => (rank(i) > rank(best) ? i : best));
-  return `A cluster of ${members.length} star systems, ${held}. Its most striking star is ${map.systems[brightest].name}, ${starPhrase(map.systems[brightest].stars[0])}.`;
+  return `A group of ${members.length} star systems, ${held}. Its most striking star is ${map.systems[brightest].name}, ${starPhrase(map.systems[brightest].stars[0])}.`;
 }
 
 /** The info panel for a void: what it is, and which constellations border it. */
@@ -769,7 +770,7 @@ function voidPanel(map: GalaxyMap, index: number, focus: FocusHandler): HTMLElem
   part.append(
     el('p', 'eyebrow', 'Void'),
     el('h3', 'map-info-title', v.name),
-    el('p', 'map-info-description', `A wide, starless stretch of the ${map.sector.name} Sector. Ships cross it only on their way somewhere else.${bordered}`),
+    el('p', 'map-info-description', `A wide, starless stretch of the ${map.sector.name} Cluster. Ships cross it only on their way somewhere else.${bordered}`),
   );
   return [closeButton(focus), part];
 }
@@ -1348,14 +1349,6 @@ function clearSpot(map: GalaxyMap, members: number[]): Point {
   return best;
 }
 
-/** Where a companion star sits beside its primary on the map: up right, down left, down right. */
-function companionOffset(primary: StarType, companion: StarType, k: number): { dx: number; dy: number; r: number } {
-  const r = companion.radius * 0.7;
-  const angle = ([-35, 145, 50][k] * Math.PI) / 180;
-  const distance = primary.radius + r + 1;
-  return { dx: Math.cos(angle) * distance, dy: Math.sin(angle) * distance, r };
-}
-
 /**
  * A nation's name written across its territory, map-style: tilted along the
  * territory's longest direction and sized to fit inside it.
@@ -1483,7 +1476,7 @@ function dust(seed: string, width = MAP_WIDTH, height = MAP_HEIGHT, count = DUST
 export function diplomacyView(nation: Nation): HTMLElement {
   const map = generateMap(nation);
   const panel = el('section', 'panel diplomacy');
-  panel.append(el('h3', 'eyebrow', `Powers of the ${map.sector.name} Sector`), legend(map));
+  panel.append(el('h3', 'eyebrow', `Powers of the ${map.sector.name} Cluster`), legend(map));
   return panel;
 }
 
@@ -1517,7 +1510,7 @@ const SECTOR_SPECKS = 70;
  */
 function drawRegion(region: GalacticRegion, map: GalaxyMap, seed: string): SVGSVGElement {
   const root = svg('svg', { viewBox: `0 0 ${REGION_WIDTH} ${REGION_HEIGHT}`, role: 'img', class: 'starmap region-map', tabindex: 0 });
-  root.setAttribute('aria-label', `Map of the ${region.name} Region: ${region.sectors.length} sectors. ${map.sector.name}, yours, is the only one charted. Use the arrow keys to move and plus or minus to zoom.`);
+  root.setAttribute('aria-label', `Map of the ${region.name} Region: ${region.sectors.length} clusters. ${map.sector.name}, yours, is the only one charted. Use the arrow keys to move and plus or minus to zoom.`);
   root.append(dust(`${seed}/region`, REGION_WIDTH, REGION_HEIGHT, 900));
 
   const random = seededRandom(`${seed}/region-specks`);
@@ -1526,7 +1519,7 @@ function drawRegion(region: GalacticRegion, map: GalaxyMap, seed: string): SVGSV
     const isHome = i === region.home;
     const group = svg('g', { class: isHome ? 'sector home' : 'sector', tabindex: 0, 'data-sector': i });
     const title = svg('title', {});
-    title.textContent = isHome ? `${sector.name} Sector (yours)` : `${sector.name} Sector (uncharted)`;
+    title.textContent = isHome ? `${sector.name} Cluster (yours)` : `${sector.name} Cluster (uncharted)`;
     const corners = hexCorners(sector).map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
     group.append(title, svg('polygon', { points: corners, class: 'sector-cell' }));
 
@@ -1569,14 +1562,14 @@ function drawRegion(region: GalacticRegion, map: GalaxyMap, seed: string): SVGSV
 function sectorPanel(region: GalacticRegion, map: GalaxyMap, index: number, close: () => void, open: () => void): HTMLElement[] {
   const sector = region.sectors[index];
   const part = el('section', 'map-info-section');
-  part.append(el('p', 'eyebrow', 'Sector'), el('h3', 'map-info-title', sector.name));
+  part.append(el('p', 'eyebrow', 'Cluster'), el('h3', 'map-info-title', sector.name));
   if (index === region.home) {
     part.append(el('p', 'muted', `${map.constellations.length} constellations · ${map.systems.length} systems · home of ${map.powers[0].name}`));
     const button = el('button', 'secondary small', 'Open star map');
     button.addEventListener('click', open);
     part.append(button);
   } else {
-    part.append(el('p', 'muted', `Uncharted. Stellar cartography hasn't reached the ${sector.name} Sector yet.`));
+    part.append(el('p', 'muted', `Uncharted. Stellar cartography hasn't reached the ${sector.name} Cluster yet.`));
   }
   return [closeButton(close), part];
 }
@@ -1704,7 +1697,7 @@ function regionPanel(galaxy: Galaxy, region: GalacticRegion, map: GalaxyMap, ind
   const section = el('section', 'map-info-section');
   section.append(el('p', 'eyebrow', 'Region'), el('h3', 'map-info-title', part.name));
   if (index === galaxy.home) {
-    section.append(el('p', 'muted', `${region.sectors.length} sectors · 1 charted (${map.sector.name}) · home of ${map.powers[0].name}`));
+    section.append(el('p', 'muted', `${region.sectors.length} clusters · 1 charted (${map.sector.name}) · home of ${map.powers[0].name}`));
     const button = el('button', 'secondary small', 'Open region');
     button.addEventListener('click', open);
     section.append(button);
@@ -1716,77 +1709,6 @@ function regionPanel(galaxy: Galaxy, region: GalacticRegion, map: GalaxyMap, ind
 
 // --- System diagram ---
 
-/**
- * Sizes in a system's diagram, in diagram units: true to life, but
- * squeezed. A body `size` Suns across is drawn `sun * size ** power`
- * across, so a hypergiant still dwarfs a red dwarf, a brown dwarf is the
- * size of a gas giant and a white dwarf no bigger than an Earth, while the
- * planets stay big enough to see. Neutron stars and black holes are far
- * too small for any scale, so they're drawn at `minStar` and `minBlackHole`
- * (whose accretion disc spreads well past that). Moons circle their planet
- * `moonGap` past its edge, each `moonStep` further out.
- */
-const DIAGRAM = { sun: 24, power: 0.28, minStar: 5, minBlackHole: 8, moonGap: 9, moonStep: 7, moonRadius: 2.4 };
-/** Earth's radius, in Suns. */
-const EARTH_IN_SUNS = 0.00917;
-/**
- * How planets' orbits are spaced, in diagram units. The first lies
- * `firstGap` past the stars, scaled up for bigger, brighter stars (whose
- * worlds orbit further out) and down for dim ones. Each orbit after is
- * `ratio` times further out than the last, as real orbits roughly are, but
- * never so close that its moons and name touch its neighbor's. If that
- * runs past `outer` (`wideOuter` for each star of a wide system), the gaps
- * close up to fit.
- */
-const ORBITS = { firstGap: 70, ratio: 1.7, outer: 560, wideOuter: 330, clearance: 12 };
-
-/** A star's size in the diagram. */
-function diagramStarSize(star: StarType): number {
-  const floor = star.exotic === 'black-hole' ? DIAGRAM.minBlackHole : DIAGRAM.minStar;
-  return Math.max(floor, DIAGRAM.sun * star.size ** DIAGRAM.power);
-}
-
-/** A planet's size in the diagram, on the same scale as its star. */
-function diagramPlanetSize(planet: Planet): number {
-  return DIAGRAM.sun * (planet.type.size * EARTH_IN_SUNS) ** DIAGRAM.power;
-}
-
-/**
- * The radius of each orbit, innermost first, round stars reaching `core`
- * from their middle, the biggest of them `starSize` across. `reach` is how
- * far each orbit's body (moons and all) spreads either side of it.
- */
-function orbitRadii(reach: number[], core: number, starSize: number, outer: number): number[] {
-  if (reach.length === 0) return [];
-  // Brightness grows with size, and with it how far out worlds can stay cool.
-  const first = core + ORBITS.firstGap * Math.sqrt(starSize / DIAGRAM.sun);
-  const spaced = (ratio: number) => {
-    const orbits = [first];
-    for (let j = 1; j < reach.length; j++) {
-      const previous = orbits[j - 1];
-      orbits.push(Math.max(previous * ratio, previous + reach[j - 1] + reach[j] + ORBITS.clearance));
-    }
-    return orbits;
-  };
-  // Round a giant, the first orbit alone may be most of the way out: leave
-  // the rest at least a little room each.
-  const end = Math.max(outer, first + 50 * (reach.length - 1));
-  const orbits = spaced(ORBITS.ratio);
-  if (orbits[orbits.length - 1] <= end) return orbits;
-  // Too wide: find the gentlest ratio that fits, so the gaps still widen outwards.
-  let [low, high] = [1, ORBITS.ratio];
-  for (let n = 0; n < 20; n++) {
-    const mid = (low + high) / 2;
-    if (spaced(mid)[reach.length - 1] <= end) low = mid;
-    else high = mid;
-  }
-  const fitted = spaced(low);
-  const last = fitted[fitted.length - 1];
-  if (last <= end) return fitted;
-  // Even evenly spaced, their moons need more room than there is: squeeze the gaps.
-  const squeeze = (end - first) / (last - first);
-  return fitted.map((orbit) => first + (orbit - first) * squeeze);
-}
 /**
  * Hyperlanes leaving the diagram, in diagram units past the outermost
  * orbit: where each starts and ends, and where the name of the system it
@@ -1819,8 +1741,6 @@ const LABEL_GAP = 4;
  * the lines keep apart however big zooming makes them.
  */
 const LABEL_LINES = { name: '1em', kind: '2.7em' };
-/** How far an asteroid belt's rocks scatter either side of its orbit, in diagram units. */
-const BELT_BAND = 14;
 
 /**
  * A top-down diagram of one system. In a close system the stars huddle in
@@ -2069,9 +1989,9 @@ function systemDiagram(
     laneOut(
       svg('g', { class: 'diagram-sector-exit' }),
       exit.angle,
-      `Hyperlane out of the sector, towards the ${exit.sector} Sector`,
-      `${exit.sector} Sector`,
-      'Leaves the sector',
+      `Hyperlane out of the cluster, towards the ${exit.sector} Cluster`,
+      `${exit.sector} Cluster`,
+      'Leaves the cluster',
     );
   }
   return { parts: [defs, back, front], reach };
@@ -2307,11 +2227,11 @@ function exitLayer(map: GalaxyMap, exits: SectorExit[]): SVGGElement {
     const place = along(EXIT.label);
     const group = svg('g', { class: 'sector-exit' });
     const title = svg('title', {});
-    title.textContent = `Hyperlane out of the sector, towards the ${exit.sector} Sector`;
+    title.textContent = `Hyperlane out of the cluster, towards the ${exit.sector} Cluster`;
     // The name reads outwards from the lane's end: left-aligned on the right, right-aligned on the left.
     const anchor = Math.abs(Math.cos(exit.angle)) < 0.3 ? 'middle' : Math.cos(exit.angle) > 0 ? 'start' : 'end';
     const label = svg('text', { x: place.x.toFixed(1), y: place.y.toFixed(1), class: 'sector-exit-name', 'text-anchor': anchor, 'dominant-baseline': 'central' });
-    label.textContent = `${exit.sector} Sector`;
+    label.textContent = `${exit.sector} Cluster`;
     group.append(
       title,
       svg('line', { x1: from.x.toFixed(1), y1: from.y.toFixed(1), x2: end.x.toFixed(1), y2: end.y.toFixed(1), class: 'lane sector-exit-lane' }),

@@ -138,6 +138,12 @@ export class Paints {
     return this.radial('beam', [[0, '#ffffff', 0.9], [0.25, '#bfe0ff', 0.55], [1, '#8fc8ff', 0]]);
   }
 
+  /** The soft halo round a star in a system diagram, in its own color (a black hole's in its disc's). */
+  halo(star: StarType): string {
+    const c = star.exotic === 'black-hole' ? ACCRETION_COLOUR : star.colour;
+    return this.radial(`halo-${slug(star)}`, [[0, c, 0.35], [1, c, 0]]);
+  }
+
   /** A neutron star's glow on the map: cold blue, not its own near-white. */
   pulsarGlow(): string {
     return this.radial('pulsar-glow', [[0, '#bfe0ff', 0.6], [0.3, '#8fc8ff', 0.22], [1, '#8fc8ff', 0]]);
@@ -248,6 +254,14 @@ function pulsarBeams(paints: Paints, x: number, y: number, length: number, width
     d: `M${cx} ${cy} L${f(x - width)} ${f(y - length)} L${f(x + width)} ${f(y - length)} Z M${cx} ${cy} L${f(x - width)} ${f(y + length)} L${f(x + width)} ${f(y + length)} Z`,
     fill: paints.beam(), transform: `rotate(${PULSAR_TILT} ${cx} ${cy})`, class: 'pulsar-beam',
   });
+}
+
+/** Where a companion star sits beside its primary on the map, and its size: up right, down left, down right. */
+export function companionOffset(primary: StarType, companion: StarType, k: number): { dx: number; dy: number; r: number } {
+  const r = companion.radius * 0.7;
+  const angle = ([-35, 145, 50][k] * Math.PI) / 180;
+  const distance = primary.radius + r + 1;
+  return { dx: Math.cos(angle) * distance, dy: Math.sin(angle) * distance, r };
 }
 
 /**

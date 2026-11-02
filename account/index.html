@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sign in · Project Starflower</title>
+    <meta name="description" content="Sign in to Project Starflower, or create an account to keep your nation on any device." />
+  </head>
+  <!-- MOCKUP: accounts don't exist yet. These forms check what's typed but send nothing (src/account/main.ts). -->
+  <body class="home account">
+    <a class="skip-link" href="#content">Skip to content</a>
+
+    <header class="site-header">
+      <a class="wordmark" href="/" aria-label="Project Starflower, home">
+        <span class="wordmark-mark" aria-hidden="true"></span>
+        <span>Project Starflower</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+      <nav id="site-nav" class="site-nav" aria-label="Main">
+        <ul class="nav-links">
+          <li><a href="/#game">The game</a></li>
+          <li><a href="/#gameplay">Gameplay</a></li>
+          <li><a href="/#newsletter">Updates</a></li>
+          <li><a href="/#faq">FAQ</a></li>
+        </ul>
+        <div class="nav-actions">
+          <a class="btn btn-primary" href="/play/">Play now</a>
+        </div>
+      </nav>
+    </header>
+    <p class="toast" role="status" aria-live="polite" hidden></p>
+
+    <main id="content" class="account-layout">
+      <!-- The pitch, over the showcase sector's star map (drawn by main.ts). -->
+      <section class="account-art" aria-labelledby="account-art-title">
+        <div class="account-map" aria-hidden="true"></div>
+        <div class="account-art-inner">
+          <p class="eyebrow">Commander's register</p>
+          <h2 id="account-art-title">Your nation, wherever you play.</h2>
+          <ul class="account-perks">
+            <li><span class="perk-mark" aria-hidden="true"></span>Keep your nation on any device, not just this browser</li>
+            <li><span class="perk-mark" aria-hidden="true"></span>Catch up on reports from your phone while you're away</li>
+            <li><span class="perk-mark" aria-hidden="true"></span>Hold your nation's name so no one else can take it</li>
+          </ul>
+          <p class="account-art-readout" data-readout>Cluster — · — systems surveyed</p>
+        </div>
+      </section>
+
+      <section class="account-panel" aria-label="Your account">
+        <div class="auth-card">
+          <div class="auth-tabs" role="tablist" aria-label="Account">
+            <button class="auth-tab" type="button" role="tab" id="tab-sign-in" aria-controls="panel-sign-in" aria-selected="true">Sign in</button>
+            <button class="auth-tab" type="button" role="tab" id="tab-create" aria-controls="panel-create" aria-selected="false" tabindex="-1">Create account</button>
+          </div>
+
+          <!-- Sign in -->
+          <form class="auth-form" id="panel-sign-in" role="tabpanel" aria-labelledby="tab-sign-in" data-form="sign-in" novalidate>
+            <div class="auth-head">
+              <h1>Welcome back, Commander</h1>
+              <p>Sign in to pick up where your nation left off.</p>
+            </div>
+
+            <div class="field">
+              <label for="sign-in-email">Email address</label>
+              <input id="sign-in-email" name="email" type="email" autocomplete="email" required aria-describedby="sign-in-email-error" />
+              <p class="field-error" id="sign-in-email-error" hidden></p>
+            </div>
+
+            <div class="field">
+              <div class="field-label-row">
+                <label for="sign-in-password">Password</label>
+                <a class="field-link" href="#" data-coming-soon="Password resets will come with accounts. Nothing is stored yet.">Forgot password?</a>
+              </div>
+              <div class="password-row">
+                <input id="sign-in-password" name="password" type="password" autocomplete="current-password" required aria-describedby="sign-in-password-error" />
+                <button class="reveal" type="button" aria-pressed="false" aria-controls="sign-in-password">Show</button>
+              </div>
+              <p class="field-error" id="sign-in-password-error" hidden></p>
+            </div>
+
+            <label class="check">
+              <input type="checkbox" name="remember" checked />
+              <span>Keep me signed in on this device</span>
+            </label>
+
+            <button class="btn btn-primary btn-large auth-submit" type="submit">Sign in</button>
+            <p class="form-note" data-form-note role="status" aria-live="polite"></p>
+
+            <p class="auth-switch">New to Project Starflower? <button class="link-button" type="button" data-show="create">Create an account</button></p>
+          </form>
+
+          <!-- Create account -->
+          <form class="auth-form" id="panel-create" role="tabpanel" aria-labelledby="tab-create" data-form="create" novalidate hidden>
+            <div class="auth-head">
+              <h1>Register a commander</h1>
+              <p>One account for your nation, on every device you play on.</p>
+            </div>
+
+            <div class="field">
+              <label for="create-name">Commander name</label>
+              <input id="create-name" name="name" type="text" autocomplete="nickname" required minlength="3" maxlength="24" aria-describedby="create-name-hint create-name-error" />
+              <p class="field-hint" id="create-name-hint">Shown to other players. 3 to 24 letters, numbers or spaces.</p>
+              <p class="field-error" id="create-name-error" hidden></p>
+            </div>
+
+            <div class="field">
+              <label for="create-email">Email address</label>
+              <input id="create-email" name="email" type="email" autocomplete="email" required aria-describedby="create-email-error" />
+              <p class="field-error" id="create-email-error" hidden></p>
+            </div>
+
+            <div class="field">
+              <label for="create-password">Password</label>
+              <div class="password-row">
+                <input id="create-password" name="password" type="password" autocomplete="new-password" required minlength="8" aria-describedby="create-password-strength create-password-error" />
+                <button class="reveal" type="button" aria-pressed="false" aria-controls="create-password">Show</button>
+              </div>
+              <div class="strength" id="create-password-strength" data-strength="0" aria-live="polite">
+                <span class="strength-bars" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+                <span class="strength-label">At least 8 characters. Longer is stronger.</span>
+              </div>
+              <p class="field-error" id="create-password-error" hidden></p>
+            </div>
+
+            <!-- Shown only when this browser has a saved nation (main.ts). -->
+            <label class="check check-nation" data-bring-nation hidden>
+              <input type="checkbox" name="bring" checked />
+              <span>Bring <strong data-nation-name>your nation</strong> with you. It's saved in this browser now.</span>
+            </label>
+
+            <label class="check">
+              <input type="checkbox" name="updates" />
+              <span>Send me a short note when something new lands</span>
+            </label>
+
+            <label class="check">
+              <input type="checkbox" name="terms" required aria-describedby="create-terms-error" />
+              <span>I agree to the <a href="#" data-coming-soon="The terms of service will be published before accounts open.">Terms of Service</a> and <a href="#" data-coming-soon="The privacy policy will be published before accounts open.">Privacy Policy</a></span>
+            </label>
+            <p class="field-error check-error" id="create-terms-error" hidden></p>
+
+            <button class="btn btn-primary btn-large auth-submit" type="submit">Create account</button>
+            <p class="form-note" data-form-note role="status" aria-live="polite"></p>
+
+            <p class="auth-switch">Already registered? <button class="link-button" type="button" data-show="sign-in">Sign in</button></p>
+          </form>
+
+          <div class="auth-alt">
+            <p class="auth-divider"><span>or</span></p>
+            <a class="btn btn-ghost auth-guest" href="/play/">Keep playing without an account</a>
+            <p class="form-note">Without an account, your nation lives in this browser only.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="/src/account/main.ts"></script>
+  </body>
+</html>
