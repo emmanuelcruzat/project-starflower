@@ -12,7 +12,8 @@ export interface MenuContent {
   actionsOnly?: boolean;
   subtitle?: string;
   /** Label and value pairs, shown as a compact table. */
-  facts?: [label: string, value: string][];
+  /** A value can be an element, like a row of resource icons. */
+  facts?: [label: string, value: string | Node][];
   description?: string;
   /** An outside link under the description, opened in a new tab. */
   link?: { label: string; href: string };
@@ -66,7 +67,11 @@ export function showContextMenu(x: number, y: number, content: MenuContent): voi
 
   if (content.facts?.length) {
     const facts = el('dl', 'context-menu-facts');
-    for (const [label, value] of content.facts) facts.append(el('dt', '', label), el('dd', '', value));
+    for (const [label, value] of content.facts) {
+      const dd = el('dd');
+      dd.append(value);
+      facts.append(el('dt', '', label), dd);
+    }
     menu.append(facts);
   }
   if (content.description) menu.append(el('p', 'context-menu-description', content.description));

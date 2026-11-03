@@ -2367,26 +2367,6 @@ button.link-button.map-system-link:hover {
   transform: scale(1.15);
 }
 
-/* Each moon's ring turns around its planet (the origin is set per moon). */
-.system-map .moon-spin {
-  transform-box: view-box;
-  animation-name: moon-orbit;
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
-}
-
-@keyframes moon-orbit {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .system-map .moon-spin {
-    animation-play-state: paused;
-  }
-}
-
 /* The diagram's names grow as you zoom in, but only up to their normal
    size: past a zoom of 1 (--zoom, set by MapControls in galaxyMap.ts)
    their sizes are divided by the zoom, so they stay that size on screen
@@ -2732,4 +2712,109 @@ button.context-menu-action:focus-visible {
     width: auto;
     margin: 0 0 12px;
   }
+}
+
+/* --- Resources: icons and the rows of them (resourceIcons.ts) --- */
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.resource-icon {
+  display: block;
+  flex: none;
+}
+
+.resource-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+}
+
+/* In right-click menus, one to a line with its name. */
+.resource-chips.labeled {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+.resource-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+/* How much of a resource a body holds, 1 to 4. */
+.resource-amount {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-2);
+}
+
+/* The card that follows the pointer over the map's systems and bodies. */
+.map-tip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 25;
+  max-width: 300px;
+  padding: 6px 9px;
+  font-size: 0.8rem;
+  background: rgba(6, 8, 13, 0.95);
+  border: 1px solid var(--panel-edge);
+  border-radius: 3px;
+  pointer-events: none;
+}
+
+.map-tip-name {
+  margin-bottom: 5px;
+  color: var(--text);
+}
+
+.map-info .resource-chips {
+  margin: 0 0 6px;
+  font-size: 0.82rem;
+}
+
+/* In the open system's list of bodies, what each holds goes under its name. */
+.map-info-bodies li .resource-chips {
+  grid-column: 2 / -1;
+  margin: 0 0 4px;
+}
+
+/* The status bar's stats, then its resources after a divider. */
+.status-middle {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.status-middle .status-stats {
+  overflow: visible;
+}
+
+.status-resources {
+  gap: 14px;
+  padding-left: 24px;
+  border-left: 1px solid var(--panel-edge);
+}
+
+.status-resource {
+  align-items: center;
+  gap: 5px;
+}
+
+/* A resource none of the nation's systems has. */
+.status-resource.none {
+  opacity: 0.4;
 }

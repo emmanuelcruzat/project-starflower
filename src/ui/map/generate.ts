@@ -1,5 +1,6 @@
 import { seededRandom, type Random } from '../../engine/random';
 import type { Nation } from '../../types';
+import type { ResourceProfile } from './resources';
 
 // PLACEHOLDER map generation. Systems, lanes and who owns what are generated
 // on screen from the nation's id and never saved. When the map becomes a real
@@ -540,6 +541,8 @@ export interface PlanetType {
   ringed?: boolean;
   /** How many moons a planet of this type can have, both ends included. Big planets hold on to more. */
   moons: { min: number; max: number };
+  /** What a planet of this type tends to hold. Each one varies (see resources.ts). */
+  resources: ResourceProfile;
   /** A sentence or two for the right-click info. */
   description: string;
 }
@@ -547,6 +550,7 @@ export interface PlanetType {
 export const PLANET_TYPES: PlanetType[] = [
   {
     name: 'Barren', size: 0.4, weight: 25, radius: 2.4, colour: '#8a8178', moons: { min: 0, max: 1 },
+    resources: { metals: 3, rare: 2, radioactives: 1, water: 0.5 },
     description: 'Airless rock, cratered and silent. Poor for living on, rich for mining.',
   },
   // The two gas giants, and the ice world and ice giant, sit side by side
@@ -554,42 +558,52 @@ export const PLANET_TYPES: PlanetType[] = [
   // each changed no other planet.
   {
     name: 'Ringed gas giant', size: 10, weight: 10, radius: 4.8, colour: '#c99a5b', ringed: true, moons: { min: 1, max: 5 },
+    resources: { gas: 4, water: 1 },
     description: 'A vast ball of hydrogen and helium, girdled by broad rings of ice and dust. Its moons are often worth more than it is.',
   },
   {
     name: 'Gas giant', size: 11, weight: 8, radius: 4.8, colour: '#c8875a', moons: { min: 1, max: 5 },
+    resources: { gas: 4 },
     description: 'A vast ball of hydrogen and helium with no surface to stand on, its clouds wound into bands and centuries-old storms.',
   },
   {
     name: 'Ice', size: 0.9, weight: 10, radius: 2.8, colour: '#bfe3f2', moons: { min: 0, max: 2 },
+    resources: { water: 4, gas: 1, metals: 1 },
     description: 'Frozen through, under thin, bitter air. Water is everywhere, if you can melt it.',
   },
   {
     name: 'Ice giant', size: 4, weight: 5, radius: 4, colour: '#6cc3cf', moons: { min: 1, max: 4 },
+    resources: { gas: 3, water: 2 },
     description: 'A cold giant of water, ammonia and methane ices under a hazy blue-green sky, swept by the fastest winds of any world.',
   },
   {
     name: 'Desert', size: 0.8, weight: 10, radius: 2.8, colour: '#d9b26a', moons: { min: 0, max: 2 },
+    resources: { metals: 2, rare: 1.5, radioactives: 1.5, water: 0.5 },
     description: 'Dry and dusty, its water locked away underground or in the polar caps.',
   },
   {
     name: 'Toxic', size: 0.95, weight: 8, radius: 2.8, colour: '#9fbf4a', moons: { min: 0, max: 1 },
+    resources: { gas: 2.5, metals: 1.5, rare: 1 },
     description: 'A thick, poisonous atmosphere traps the heat under crushing clouds.',
   },
   {
     name: 'Volcanic', size: 0.7, weight: 8, radius: 2.6, colour: '#d2603f', moons: { min: 0, max: 1 },
+    resources: { metals: 2.5, radioactives: 2.5, rare: 1.5, gas: 1 },
     description: 'Young and restless, its surface remade again and again by lava and ash.',
   },
   {
     name: 'Ocean', size: 1.3, weight: 6, radius: 3.2, colour: '#3f8fd2', moons: { min: 0, max: 2 },
+    resources: { water: 4, biomass: 2, metals: 0.5 },
     description: 'Water from pole to pole, with islands few and far between.',
   },
   {
     name: 'Jungle', size: 1.1, weight: 4, radius: 3.2, colour: '#3fa65f', moons: { min: 0, max: 2 },
+    resources: { biomass: 4, water: 2, metals: 1 },
     description: 'Hot, wet and overgrown. Life thrives here, not all of it friendly.',
   },
   {
     name: 'Terran', size: 1, weight: 4, radius: 3.2, colour: '#5fb3a1', moons: { min: 0, max: 2 },
+    resources: { biomass: 3, water: 3, metals: 1.5, rare: 0.5 },
     description: 'Temperate, with breathable air and open water: as close to a second home as it gets.',
   },
 ];
@@ -599,12 +613,25 @@ export interface MoonType {
   name: string;
   weight: number;
   colour: string;
+  /** What a moon of this type tends to hold. Each one varies (see resources.ts). */
+  resources: ResourceProfile;
+  /** A sentence for the right-click info. */
+  description: string;
 }
 
 export const MOON_TYPES: MoonType[] = [
-  { name: 'Rocky moon', weight: 3, colour: '#9a948c' },
-  { name: 'Icy moon', weight: 2, colour: '#d2e8f2' },
-  { name: 'Volcanic moon', weight: 1, colour: '#d98a5a' },
+  {
+    name: 'Rocky moon', weight: 3, colour: '#9a948c', resources: { metals: 2, rare: 1, radioactives: 0.5 },
+    description: "Bare, cratered rock, much like a small barren world. Easy to land on and easy to mine.",
+  },
+  {
+    name: 'Icy moon', weight: 2, colour: '#d2e8f2', resources: { water: 3, gas: 0.5 },
+    description: "A shell of ice, sometimes over a hidden ocean kept liquid by its planet's pull.",
+  },
+  {
+    name: 'Volcanic moon', weight: 1, colour: '#d98a5a', resources: { metals: 1.5, radioactives: 2, rare: 1 },
+    description: "Kneaded by its planet's pull until its insides melt and pour out through its volcanoes.",
+  },
 ];
 
 export interface Planet {
@@ -672,6 +699,7 @@ const BELT_CHANCE = 0.5;
 export const BELT_TYPE = {
   name: 'Asteroid belt',
   colour: '#9c8f7e',
+  resources: { metals: 3.5, rare: 2.5, water: 1, radioactives: 1 } as ResourceProfile,
   description: "A wide ring of rock and metal left over from the birth of the system, too scattered to ever form a planet. A miner's fortune, and a hazard to navigation.",
 };
 

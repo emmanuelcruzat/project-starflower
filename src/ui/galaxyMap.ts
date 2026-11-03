@@ -10,6 +10,8 @@ import {
   BELT_TYPE, beltName, describeStars, generateMap, hostOrbits, MAP_HEIGHT, MAP_WIDTH, planetNames, sectorShape, starLetter, systemBelt, systemPlanets,
   type Belt, type GalaxyMap, type Lane, type Planet, type StarType,
 } from './map/generate';
+import { systemDeposits, systemTotals, type Deposits, type SystemDeposits } from './map/resources';
+import { depositChips } from './resourceIcons';
 import { generateRegion, hexCorners, REGION_HEIGHT, REGION_WIDTH, SECTOR_RADIUS, type GalacticRegion } from './map/region';
 import {
   CORE_RADIUS, GALAXY_CENTRE, GALAXY_RADIUS, GALAXY_SIZE, generateGalaxy, regionAt, wedgePath, type Galaxy,
@@ -294,7 +296,7 @@ export function galaxyMapView(nation: Nation, onClaim: (system: number, name: st
     if (next === null) return;
     info.replaceChildren(...(next.kind === 'constellation'
       ? constellationPanel(map, next.index, focus)
-      : systemPanel(map, next.index, nearby, planets, belt, focus)));
+      : systemPanel(map, next.index, nearby, planets, belt, systemDeposits(nation, next.index, planets, belt), focus)));
     info.scrollTop = 0;
 
     if (moveCamera) {
@@ -384,7 +386,8 @@ export function galaxyMapView(nation: Nation, onClaim: (system: number, name: st
     systemMap.setAttribute('aria-label', `Diagram of the ${map.systems[index].name} system: ${describeStars(map.systems[index].stars)}, ${planets.length} planets${belt ? ', an asteroid belt' : ''}. Zoom out or press Escape to return to the cluster.`);
     crumbs.replaceChildren(...breadcrumbs(map, galaxy, region, { kind: 'system', index }, map.systems[index].constellation, fromSystem, (view) => showView(view, 'zoom')));
     info.hidden = false;
-    info.replaceChildren(...systemPanel(map, index, connections(map, index), planets, belt, fromSystem), bodiesSection(map, index, planets, belt));
+    const deposits = systemDeposits(nation, index, planets, belt);
+    info.replaceChildren(...systemPanel(map, index, connections(map, index), planets, belt, deposits, fromSystem), bodiesSection(map, index, planets, belt, deposits));
     info.scrollTop = 0;
   };
 
@@ -551,6 +554,17 @@ export function galaxyMapView(nation: Nation, onClaim: (system: number, name: st
     const zoom = Math.max(camera!.zoom, FOCUS_ZOOM.constellation);
     controls.lookAt(v.x - info.offsetWidth / 2 / zoom, v.y, zoom);
   };
+  /** Everything a system's bodies hold, for the menus and the hover card. */
+  const bodiesOf = (index: number) => {
+    const planets = systemPlanets(nation, index, map.systems[index].stars.length);
+    const belt = systemBelt(nation, index, planets);
+    return { planets, belt, deposits: systemDeposits(nation, index, planets, belt) };
+  };
+  /** Which system the bodies under the pointer belong to: the open diagram's, or the focused one's miniature. */
+  const bodiesOwner = (): number | null => {
+    const now = focused.get(nation.id);
+    return current() === 'system' ? openSystems.get(nation.id) ?? null : now?.kind === 'system' ? now.index : null;
+  };
   const menuFor = (target: Element): MenuContent | null => {
     // A constellation's or void's name: just a way to its description.
     const constellationName = target.closest('.constellation-name');
@@ -567,21 +581,25 @@ export function galaxyMapView(nation: Nation, onClaim: (system: number, name: st
       return { eyebrow: 'Void', title: map.voids[index].name, actionsOnly: true, actions: [{ label: 'Show info', run: () => showVoid(index) }] };
     }
 
-    // Which system the bodies under the pointer belong to: the open diagram's, or the focused one's miniature.
-    const now = focused.get(nation.id);
-    const owner = current() === 'system' ? openSystems.get(nation.id) ?? null : now?.kind === 'system' ? now.index : null;
+    const owner = bodiesOwner();
     const inPreview = current() === 'sector' && target.closest('.system-preview') !== null;
     const extra = inPreview && owner !== null ? [{ label: 'Open system view', run: () => openSystem(owner) }] : [];
 
     const beltNode = target.closest('[data-belt]');
     if (beltNode && owner !== null) {
-      const planets = systemPlanets(nation, owner, map.systems[owner].stars.length);
-      const belt = systemBelt(nation, owner, planets);
-      if (belt) return { ...beltInfo(map, owner, planets, belt), actions: extra };
+      const { planets, belt, deposits } = bodiesOf(owner);
+      if (belt) return { ...beltInfo(map, owner, planets, belt, deposits), actions: extra };
+    }
+    const moon = target.closest('[data-moon]');
+    if (moon && owner !== null) {
+      const [k, m] = moon.getAttribute('data-moon')!.split('/').map(Number);
+      const { planets, deposits } = bodiesOf(owner);
+      return { ...moonInfo(map, owner, planets, k, m, deposits), actions: extra };
     }
     const planet = target.closest('[data-planet]');
     if (planet && owner !== null) {
-      return { ...planetInfo(map, owner, systemPlanets(nation, owner, map.systems[owner].stars.length), Number(planet.getAttribute('data-planet'))), actions: extra };
+      const { planets, deposits } = bodiesOf(owner);
+      return { ...planetInfo(map, owner, planets, Number(planet.getAttribute('data-planet')), deposits), actions: extra };
     }
     const star = target.closest('[data-star]');
     if (star && owner !== null) return { ...starInfo(map, owner, Number(star.getAttribute('data-star'))), actions: extra };
@@ -589,8 +607,8 @@ export function galaxyMapView(nation: Nation, onClaim: (system: number, name: st
     if (system) {
       const index = Number(system.getAttribute('data-system'));
       // On the star map, a system's own star is its primary; the menu covers the whole system.
-      const planets = systemPlanets(nation, index, map.systems[index].stars.length);
-      return { ...systemInfo(map, index, planets, systemBelt(nation, index, planets)), actions: systemActions(index) };
+      const { planets, belt, deposits } = bodiesOf(index);
+      return { ...systemInfo(map, index, planets, belt, deposits), actions: systemActions(index) };
     }
     return null;
   };
@@ -610,6 +628,58 @@ export function galaxyMapView(nation: Nation, onClaim: (system: number, name: st
       playChirp(content.eyebrow.startsWith('Star system') ? 'system' : 'constellation');
       showContextMenu(x, y, content);
     });
+  }
+
+  // Hovering a system, planet, moon or belt shows a card with its name and
+  // what it holds, a row of resource icons. (A system shows everything found
+  // anywhere in it.) The card follows the pointer and hides while dragging.
+  const tipFor = (node: Element): { text: string; deposits: Deposits } | null => {
+    const text = node.getAttribute('data-tip')!;
+    if (node.hasAttribute('data-system')) return { text, deposits: systemTotals(bodiesOf(Number(node.getAttribute('data-system'))).deposits) };
+    const owner = bodiesOwner();
+    if (owner === null) return null;
+    const { deposits } = bodiesOf(owner);
+    if (node.hasAttribute('data-belt')) return deposits.belt ? { text, deposits: deposits.belt } : null;
+    if (node.hasAttribute('data-moon')) {
+      const [k, m] = node.getAttribute('data-moon')!.split('/').map(Number);
+      return { text, deposits: deposits.moons[k][m] };
+    }
+    if (node.hasAttribute('data-planet')) return { text, deposits: deposits.planets[Number(node.getAttribute('data-planet'))] };
+    return null;
+  };
+  const card = el('div', 'map-tip');
+  card.hidden = true;
+  card.setAttribute('aria-hidden', 'true');
+  let cardFor: Element | null = null;
+  const hideCard = () => {
+    card.hidden = true;
+    cardFor = null;
+  };
+  for (const node of [starmap, systemMap]) {
+    node.addEventListener('pointermove', (event) => {
+      // No card while a button is down (dragging the map) or for touch, which has no hover.
+      if (event.buttons !== 0 || event.pointerType === 'touch') return hideCard();
+      const target = (event.target as Element).closest('[data-tip]');
+      if (!target) return hideCard();
+      if (target !== cardFor) {
+        const tip = tipFor(target);
+        if (!tip) return hideCard();
+        cardFor = target;
+        card.replaceChildren(el('div', 'map-tip-name', tip.text), depositChips(tip.deposits));
+        // In the page's body, so the map's clipping and transforms don't touch it.
+        if (!card.isConnected) document.body.append(card);
+        card.hidden = false;
+      }
+      // Beside the pointer, flipped to the other side near the window's edges.
+      const { innerWidth: w, innerHeight: h } = window;
+      const { offsetWidth: cw, offsetHeight: ch } = card;
+      const x = event.clientX + 14 + cw > w ? event.clientX - 14 - cw : event.clientX + 14;
+      const y = event.clientY + 16 + ch > h ? event.clientY - 12 - ch : event.clientY + 16;
+      card.style.transform = `translate(${Math.max(0, x)}px, ${Math.max(0, y)}px)`;
+    });
+    node.addEventListener('pointerleave', hideCard);
+    node.addEventListener('pointerdown', hideCard);
+    node.addEventListener('wheel', hideCard, { passive: true });
   }
 
   /** The trail for the galaxy and region views: "Galaxy › Region", with the galaxy a link back out. */
@@ -875,9 +945,7 @@ function systemPreview(map: GalaxyMap, index: number, planets: Planet[], belt: B
         // The belt: a ring of dashes, rubble rather than a path. It takes
         // nothing from the stream, so the planets keep their places.
         const ring = svg('circle', { cx: host.x.toFixed(1), cy: host.y.toFixed(1), r: orbit.toFixed(1), class: 'preview-belt', stroke: BELT_TYPE.colour, 'data-belt': '' });
-        const title = svg('title', {});
-        title.textContent = `${beltName(system, belt!)} · ${BELT_TYPE.name}`;
-        ring.append(title);
+        tip(ring, `${beltName(system, belt!)} · ${BELT_TYPE.name}`);
         bodies.prepend(ring);
         return;
       }
@@ -889,10 +957,8 @@ function systemPreview(map: GalaxyMap, index: number, planets: Planet[], belt: B
       const y = host.y + Math.sin(angle * Math.PI * 2) * orbit;
       const r = planet.type.radius * PREVIEW.planetScale;
       const body = svg('g', { class: 'planet', 'data-planet': i });
-      const title = svg('title', {});
       const moons = planet.moons.length;
-      title.textContent = `${names[i]} · ${planet.type.name}${moons > 0 ? ` · ${moons} moon${moons === 1 ? '' : 's'}` : ''}`;
-      body.append(title);
+      tip(body, `${names[i]} · ${planet.type.name}${moons > 0 ? ` · ${moons} moon${moons === 1 ? '' : 's'}` : ''}`);
       // A planet with moons gets a faint halo ring, a hint of what's round it.
       if (moons > 0) body.append(svg('circle', { cx: x.toFixed(1), cy: y.toFixed(1), r: (r + 1.4).toFixed(2), class: 'preview-moons', stroke: planet.type.colour }));
       // The same surface stream as the diagram, so the planet looks the same there.
@@ -921,7 +987,9 @@ function systemPreview(map: GalaxyMap, index: number, planets: Planet[], belt: B
 }
 
 /** One system: what and whose it is, and every system a hyperlane leads to. */
-function systemPanel(map: GalaxyMap, index: number, nearby: number[], planets: Planet[], belt: Belt | null, focus: FocusHandler): HTMLElement[] {
+function systemPanel(
+  map: GalaxyMap, index: number, nearby: number[], planets: Planet[], belt: Belt | null, deposits: SystemDeposits, focus: FocusHandler,
+): HTMLElement[] {
   const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
   const moonCount = planets.reduce((sum, p) => sum + p.moons.length, 0);
   const system = map.systems[index];
@@ -935,6 +1003,8 @@ function systemPanel(map: GalaxyMap, index: number, nearby: number[], planets: P
     el('p', 'muted', `${plural(planets.length, 'planet')} · ${plural(moonCount, 'moon')}${belt ? ' · 1 asteroid belt' : ''} · ${plural(nearby.length, 'hyperlane')}`),
   );
   part.append(el('p', 'muted', ownerName(map, map.owners[index])));
+  // Each resource found anywhere in the system, as it is where it's richest.
+  part.append(el('p', 'stat-label map-info-subhead', 'Resources'), depositChips(systemTotals(deposits)));
 
   // Lanes into other constellations are its gateways, so say where they lead.
   const list = el('ul', 'map-info-systems');
@@ -1236,6 +1306,17 @@ function svg<K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string,
   return node;
 }
 
+/**
+ * What hovering a system or body says, shown in the map's hover card with
+ * the resources it holds (see tipFor in galaxyMapView). Used instead of an
+ * SVG <title>, which would pop up the browser's own tooltip as well. It's
+ * also the thing's name for screen readers.
+ */
+function tip(node: SVGElement, text: string): void {
+  node.setAttribute('data-tip', text);
+  node.setAttribute('aria-label', text);
+}
+
 function drawMap(map: GalaxyMap, seed: string, exits: SectorExit[]): SVGSVGElement {
   const { systems, lanes, powers, owners, home } = map;
   const root = svg('svg', { viewBox: `0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`, role: 'img', class: 'starmap sector-map', tabindex: 0 });
@@ -1312,11 +1393,10 @@ function drawMap(map: GalaxyMap, seed: string, exits: SectorExit[]): SVGSVGEleme
     const x = system.x.toFixed(1);
     const y = system.y.toFixed(1);
 
-    const title = svg('title', {});
     // A named system shows only its name; its survey designation stays internal.
-    title.textContent = `${system.name} · ${describeStars(system.stars)} · ${ownerName}`;
+    tip(group, `${system.name} · ${describeStars(system.stars)} · ${ownerName}`);
     // An invisible, larger circle makes small stars easy to hover.
-    group.append(title, svg('circle', { cx: x, cy: y, r: 12, class: 'hit' }));
+    group.append(svg('circle', { cx: x, cy: y, r: 12, class: 'hit' }));
     // Companion stars sit just beside the primary, smaller. The system's
     // miniature draws them in their own places instead, so they hide when it's showing.
     const [primary, ...companions] = system.stars;
@@ -1754,9 +1834,6 @@ function regionPanel(galaxy: Galaxy, region: GalacticRegion, map: GalaxyMap, ind
  * leads to goes.
  */
 const LANE_OUT = { start: 24, end: 150, label: 166 };
-/** How long moons take to go round, in seconds: the innermost, plus this much more for each one further out. */
-const MOON_PERIOD = { first: 14, step: 9 };
-
 /** The system with a star within `within` map units of this point, nearest first, or null. */
 function systemNear(map: GalaxyMap, point: Point, within: number): number | null {
   let best: number | null = null;
@@ -1842,29 +1919,21 @@ function systemDiagram(
     const name = names[k];
     const group = svg('g', { class: 'diagram-planet' });
 
-    // Moons, each on its own ring, going round at its own pace. A negative
-    // delay starts each one partway round, so they don't all line up.
+    // Moons, each on its own ring, standing still at a random point round
+    // it, so they don't all line up.
     planet.moons.forEach((moon, m) => {
       const ring = r + DIAGRAM.moonGap + m * DIAGRAM.moonStep;
       group.append(svg('circle', { cx: x.toFixed(1), cy: y.toFixed(1), r: ring.toFixed(1), class: 'diagram-moon-orbit' }));
-      const period = MOON_PERIOD.first + m * MOON_PERIOD.step;
-      const spin = svg('g', {
-        class: 'moon-spin',
-        style: `transform-origin: ${x.toFixed(1)}px ${y.toFixed(1)}px; animation-duration: ${period}s; animation-delay: -${(random() * period).toFixed(1)}s`,
-      });
-      const node = moonBody(paints, moon, x + ring, y, DIAGRAM.moonRadius);
-      const title = svg('title', {});
+      const turn = random() * Math.PI * 2;
+      const node = moonBody(paints, moon, x + Math.cos(turn) * ring, y + Math.sin(turn) * ring, DIAGRAM.moonRadius);
+      node.setAttribute('data-moon', `${k}/${m}`);
       // Moons are lettered outwards from their planet: a, b, c...
-      title.textContent = `${name}-${String.fromCharCode(97 + m)} · ${moon.name}`;
-      node.append(title);
-      spin.append(node);
-      group.append(spin);
+      tip(node, `${name}-${String.fromCharCode(97 + m)} · ${moon.name}`);
+      group.append(node);
     });
 
     const body = svg('g', { class: 'diagram-planet-body', 'data-planet': k });
-    const title = svg('title', {});
-    title.textContent = `${name} · ${type.name}${planet.moons.length > 0 ? ` · ${planet.moons.length} moon${planet.moons.length === 1 ? '' : 's'}` : ''}`;
-    body.append(title);
+    tip(body, `${name} · ${type.name}${planet.moons.length > 0 ? ` · ${planet.moons.length} moon${planet.moons.length === 1 ? '' : 's'}` : ''}`);
     const px = x.toFixed(1);
     // Lit from the stars it circles. Its own surface stream, shared with the miniature.
     body.append(planetBody(paints, type, x, y, r, `planet-${k}`, seededRandom(`${seed}/surface/${index}/${k}`), lightFrom(x, y, cx, cy)));
@@ -1891,10 +1960,9 @@ function systemDiagram(
     const rocks = seededRandom(`${seed}/belt-rocks/${index}`);
     const group = svg('g', { class: 'diagram-belt', 'data-belt': '' });
     const name = beltName(system, belt!);
-    const title = svg('title', {});
-    title.textContent = `${name} · ${BELT_TYPE.name}`;
+    tip(group, `${name} · ${BELT_TYPE.name}`);
     // A wide, invisible ring over the band, so it's easy to hover or right-click.
-    group.append(title, svg('circle', { cx: cx.toFixed(1), cy: cy.toFixed(1), r: orbit.toFixed(1), class: 'diagram-belt-hit', 'stroke-width': BELT_BAND * 2 }));
+    group.append(svg('circle', { cx: cx.toFixed(1), cy: cy.toFixed(1), r: orbit.toFixed(1), class: 'diagram-belt-hit', 'stroke-width': BELT_BAND * 2 }));
     const count = Math.round((orbit * Math.PI * 2) / 7);
     for (let n = 0; n < count; n++) {
       const angle = rocks() * Math.PI * 2;
@@ -2044,16 +2112,18 @@ function systemDiagram(
 }
 
 /** The open system's stars and planets, listed for the panel beside its diagram. */
-function bodiesSection(map: GalaxyMap, index: number, planets: Planet[], belt: Belt | null): HTMLElement {
+function bodiesSection(map: GalaxyMap, index: number, planets: Planet[], belt: Belt | null, deposits: SystemDeposits): HTMLElement {
   const system = map.systems[index];
   const names = planetNames(system, planets);
   const section = el('section', 'map-info-section');
-  const list = el('ul', 'map-info-systems');
-  const row = (colour: string, name: string, note: string) => {
+  const list = el('ul', 'map-info-systems map-info-bodies');
+  // A planet or belt also shows what it holds, under its name. Stars hold nothing.
+  const row = (colour: string, name: string, note: string, held?: Deposits) => {
     const item = el('li');
     const dot = el('span', 'body-swatch');
     dot.style.background = colour;
     item.append(dot, el('span', '', name), el('span', 'muted', note));
+    if (held) item.append(depositChips(held));
     list.append(item);
   };
   system.stars.forEach((star, k) => {
@@ -2063,9 +2133,9 @@ function bodiesSection(map: GalaxyMap, index: number, planets: Planet[], belt: B
   const order = planets.map((_, k) => k).sort((a, b) => (planets[a].host ?? -1) - (planets[b].host ?? -1) || a - b);
   for (const k of order) {
     const moons = planets[k].moons.length;
-    row(planets[k].type.colour, names[k], `${planets[k].type.name}${moons > 0 ? ` · ${moons} moon${moons === 1 ? '' : 's'}` : ''}`);
+    row(planets[k].type.colour, names[k], `${planets[k].type.name}${moons > 0 ? ` · ${moons} moon${moons === 1 ? '' : 's'}` : ''}`, deposits.planets[k]);
   }
-  if (belt) row(BELT_TYPE.colour, beltName(system, belt), BELT_TYPE.name);
+  if (belt) row(BELT_TYPE.colour, beltName(system, belt), BELT_TYPE.name, deposits.belt ?? {});
   section.append(el('p', 'stat-label map-info-subhead', 'Bodies'), list);
   return section;
 }
@@ -2118,13 +2188,15 @@ function diplomacyActions(power: string): NonNullable<MenuContent['actions']> {
 }
 
 /** What the right-click menu says about a star system as a whole. */
-function systemInfo(map: GalaxyMap, index: number, planets: Planet[], belt: Belt | null): MenuContent {
+function systemInfo(map: GalaxyMap, index: number, planets: Planet[], belt: Belt | null, deposits: SystemDeposits): MenuContent {
   const system = map.systems[index];
   const moons = planets.reduce((sum, p) => sum + p.moons.length, 0);
-  const facts: [string, string][] = [
+  const facts: [string, string | Node][] = [
     ['Stars', describeStars(system.stars)],
     ['Planets', `${planets.length} · ${plural(moons, 'moon')}`],
     ['Asteroid belt', belt ? beltName(system, belt) : 'None'],
+    // Each resource found anywhere in the system, as it is where it's richest.
+    ['Resources', depositChips(systemTotals(deposits), true)],
     ['Hyperlanes', String(connections(map, index).length)],
     ['Constellation', map.constellations[system.constellation].name],
     ['Held by', ownerName(map, map.owners[index])],
@@ -2155,7 +2227,7 @@ function starInfo(map: GalaxyMap, index: number, k: number): MenuContent {
 }
 
 /** What the right-click menu says about the asteroid belt: where it lies among the planets. */
-function beltInfo(map: GalaxyMap, index: number, planets: Planet[], belt: Belt): MenuContent {
+function beltInfo(map: GalaxyMap, index: number, planets: Planet[], belt: Belt, deposits: SystemDeposits): MenuContent {
   const system = map.systems[index];
   const names = planetNames(system, planets);
   const orbits = hostOrbits(planets, belt, belt.host);
@@ -2170,6 +2242,7 @@ function beltInfo(map: GalaxyMap, index: number, planets: Planet[], belt: Belt):
     facts: [
       ['Orbits', orbitsWhat],
       ['Lies', outside === undefined ? `Beyond ${names[inside]}` : `Between ${names[inside]} and ${names[outside]}`],
+      ['Resources', depositChips(deposits.belt ?? {}, true)],
     ],
     description: BELT_TYPE.description,
     colour: BELT_TYPE.colour,
@@ -2177,7 +2250,7 @@ function beltInfo(map: GalaxyMap, index: number, planets: Planet[], belt: Belt):
 }
 
 /** What the right-click menu says about a planet. */
-function planetInfo(map: GalaxyMap, index: number, planets: Planet[], k: number): MenuContent {
+function planetInfo(map: GalaxyMap, index: number, planets: Planet[], k: number, deposits: SystemDeposits): MenuContent {
   const system = map.systems[index];
   const planet = planets[k];
   const name = planetNames(system, planets)[k];
@@ -2192,13 +2265,32 @@ function planetInfo(map: GalaxyMap, index: number, planets: Planet[], k: number)
     : system.stars.length > 1 ? `All ${system.stars.length} stars` : system.name;
   // Moons by kind, like "2 · Rocky, Icy".
   const kinds = [...new Set(planet.moons.map((m) => m.name.replace(/ moon$/, '')))];
-  const facts: [string, string][] = [
+  const facts: [string, string | Node][] = [
     ['Type', planet.type.name],
     ['Orbits', `${orbits}, ${ordinal(place)} out`],
     ['Moons', planet.moons.length === 0 ? 'None' : `${planet.moons.length} · ${kinds.join(', ')}`],
   ];
   if (planet.type.ringed) facts.push(['Rings', 'Yes']);
+  facts.push(['Resources', depositChips(deposits.planets[k], true)]);
   return { eyebrow: 'Planet', title: name, subtitle: planet.type.name, facts, description: planet.type.description, colour: planet.type.colour };
+}
+
+/** What the right-click menu says about a moon: moon m of planet k, lettered a, b, c... outwards. */
+function moonInfo(map: GalaxyMap, index: number, planets: Planet[], k: number, m: number, deposits: SystemDeposits): MenuContent {
+  const planetName = planetNames(map.systems[index], planets)[k];
+  const moon = planets[k].moons[m];
+  return {
+    eyebrow: 'Moon',
+    title: `${planetName}-${String.fromCharCode(97 + m)}`,
+    subtitle: moon.name,
+    facts: [
+      ['Type', moon.name],
+      ['Orbits', planetName],
+      ['Resources', depositChips(deposits.moons[k][m], true)],
+    ],
+    description: moon.description,
+    colour: moon.colour,
+  };
 }
 
 /**

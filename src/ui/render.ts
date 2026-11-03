@@ -14,6 +14,8 @@ import { overviewView } from './overview';
 import { plannerView, type PlannerHandlers } from './planner';
 import { trackerView } from './tracker';
 import { chatMockup } from './chat';
+import { nationResources, RESOURCE_KEYS, RESOURCES } from './map/resources';
+import { resourceIcon } from './resourceIcons';
 
 // Top-level rendering: picks the screen and assembles it from the view
 // modules. Each render rebuilds the screen from the nation, so the page can
@@ -132,8 +134,8 @@ function dock(selected: Tab | null, attention: number, onSelect: (tab: Tab | nul
 }
 
 /**
- * The bar across the top: the nation's name, its stats, and the clock and
- * New Nation. viewKey covers the name and stats, so the bar redraws when
+ * The bar across the top: the nation's name, its stats and resources, and
+ * the clock and New Nation. viewKey covers the name and stats, so the bar redraws when
  * they change; the clock ticks on its own (updateLiveTimers).
  */
 function statusBar(nation: Nation, now: number): HTMLElement {
@@ -149,12 +151,32 @@ function statusBar(nation: Nation, now: number): HTMLElement {
     item.append(el('dt', 'status-stat-label', STAT_LABELS[key]), el('dd', 'status-stat-value', short));
     list.append(item);
   }
+  // Each resource, by its icon: the richness of every deposit in the
+  // nation's systems added up. PLACEHOLDER until system development gives
+  // the nation stockpiles of them.
+  const resources = el('dl', 'status-stats status-resources');
+  resources.setAttribute('aria-label', 'Resources');
+  const held = nationResources(nation);
+  for (const key of RESOURCE_KEYS) {
+    const { deposits, richness } = held[key];
+    const item = el('div', deposits === 0 ? 'status-stat status-resource none' : 'status-stat status-resource');
+    const { name } = RESOURCES[key];
+    item.title = deposits === 0
+      ? `${name}: none in your systems`
+      : `${name}: ${richness} from ${deposits} deposit${deposits === 1 ? '' : 's'} in your systems`;
+    const label = el('dt', 'status-stat-label');
+    label.append(resourceIcon(key, 15), el('span', 'visually-hidden', name));
+    item.append(label, el('dd', 'status-stat-value', String(richness)));
+    resources.append(item);
+  }
+  const middle = el('div', 'status-middle');
+  middle.append(list, resources);
   // The real New Nation button lives in the page's (hidden) top bar, where main.ts listens to it.
   const restart = el('button', 'secondary small status-restart', 'New Nation');
   restart.addEventListener('click', () => byId('new-nation').click());
   const right = el('div', 'status-right');
   right.append(liveClock(now), restart);
-  bar.append(el('span', 'status-name', fullName(nation)), list, right);
+  bar.append(el('span', 'status-name', fullName(nation)), middle, right);
   return bar;
 }
 
@@ -179,6 +201,8 @@ function iconButton(className: string, label: string): HTMLButtonElement {
 export function viewKey(nation: Nation, content: GameContent, now: number): string {
   return JSON.stringify([
     nation.prefix,
+    // Claiming a system can change the resources in the status bar.
+    nation.claimedSystems ?? [],
     STAT_KEYS.map((key) => formatStat(key, nation.stats[key])),
     nation.incidents.queue.map((p) => p.incidentId),
     nation.operations.map((op) => [op.operationId, op.stageId, isAwaitingDecision(op, now)]),
